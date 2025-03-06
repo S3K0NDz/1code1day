@@ -19,8 +19,7 @@ export default function Home() {
           {/* Hero Section */}
           <div className="text-center mb-16">
             <h1 className="text-4xl font-bold mb-6 max-w-3xl mx-auto">
-              La plataforma de retos de programación en español para mejorar tus habilidades y prepararte para
-              entrevistas técnicas
+              La plataforma de retos de programación diarios
             </h1>
             <div className="flex gap-4 justify-center mt-10">
               <Link href="/reto-diario">
