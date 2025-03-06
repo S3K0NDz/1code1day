@@ -572,16 +572,7 @@ export default function RetoPage() {
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Restricciones</h3>
-                  <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                    <li>La cadena de entrada solo contiene letras del alfabeto y espacios</li>
-                    <li>La cadena de entrada puede estar vacía</li>
-                    <li>No utilices métodos incorporados como reverse()</li>
-                    <li>La función debe devolver la cadena invertida</li>
-                    <li>Considera casos con espacios y caracteres especiales</li>
-                  </ul>
-                </div>
+               
               </div>
             </TabsContent>
 
