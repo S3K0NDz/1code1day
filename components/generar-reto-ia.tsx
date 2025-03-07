@@ -34,7 +34,7 @@ export default function GenerarRetoIA({ onRetoGenerated }: GenerarRetoIAProps) {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 segundos de timeout
 
-      const response = await fetch("/api/generate-reto-edge", {
+      const response = await fetch("/api/generate-reto", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
