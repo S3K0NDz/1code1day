@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Sparkles } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
@@ -34,7 +34,7 @@ export default function GenerarRetoIA({ onRetoGenerated }: GenerarRetoIAProps) {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 segundos de timeout
 
-      const response = await fetch("/api/generate-reto", {
+      const response = await fetch("/api/generate-reto-edge", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -77,7 +77,19 @@ export default function GenerarRetoIA({ onRetoGenerated }: GenerarRetoIAProps) {
 
           console.log("Stream completado, resultado:", result.substring(0, 100) + "...")
 
-          const data = JSON.parse(result)
+          // Intentar parsear el resultado como JSON
+          let data
+          try {
+            data = JSON.parse(result)
+          } catch (e) {
+            // Si no se puede parsear como JSON, intentar extraer el JSON del texto
+            const jsonMatch = result.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              data = JSON.parse(jsonMatch[0])
+            } else {
+              throw new Error("No se pudo parsear la respuesta como JSON")
+            }
+          }
 
           if (!data.title || !data.description) {
             console.warn("La respuesta no tiene la estructura esperada:", data)
@@ -204,3 +216,4 @@ export default function GenerarRetoIA({ onRetoGenerated }: GenerarRetoIAProps) {
     </Card>
   )
 }
+

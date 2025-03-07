@@ -543,7 +543,7 @@ function RetoCard({
 }) {
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    reto.daily_date ? new Date(reto.daily_date) : undefined
+    reto.daily_date ? new Date(reto.daily_date) : undefined,
   )
 
   return (
@@ -610,3 +610,4 @@ function RetoCard({
     </Card>
   )
 }
+

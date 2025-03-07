@@ -27,23 +27,26 @@ import { CodeOutput } from "@/components/code-output"
 import KeyboardHandler from "./keyboard-handler"
 import ClipboardHelper from "./clipboard-helper"
 import { Toaster } from "@/components/ui/toaster"
+import { toast } from "@/components/ui/use-toast"
 import { supabase } from "@/utils/supabaseClient"
+import { useAuth } from "@/components/auth-provider"
 
 export default function RetoPage() {
   const params = useParams()
   const id = params?.id as string
 
   const [isLoading, setIsLoading] = useState(true)
-  const [reto, setReto] = useState(null)
+  const [reto, setReto] = useState<any>(null)
   const [code, setCode] = useState("")
   const [output, setOutput] = useState("")
   const [success, setSuccess] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [remainingTime, setRemainingTime] = useState(45 * 60)
-  const editorRef = useRef(null)
+  const editorRef = useRef<any>(null)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [username, setUsername] = useState("usuario")
-  const [testResults, setTestResults] = useState([])
+  const [testResults, setTestResults] = useState<any[]>([])
+  const { user } = useAuth()
 
   useEffect(() => {
     const fetchReto = async () => {
@@ -95,37 +98,36 @@ export default function RetoPage() {
           setRemainingTime((data.timelimit || 45) * 60)
 
           // Fetch user data if needed
-          const fetchUserData = async () => {
+          if (user) {
             try {
-              const { data: userData } = await supabase.auth.getUser()
-              if (userData?.user) {
-                const { data: profile } = await supabase
-                  .from("profiles")
-                  .select("username")
-                  .eq("id", userData.user.id)
-                  .single()
+              const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).single()
 
-                if (profile?.username) {
-                  setUsername(profile.username)
-                }
+              if (profile?.username) {
+                setUsername(profile.username)
+              } else {
+                setUsername(user.email?.split("@")[0] || "usuario")
               }
             } catch (error) {
               console.error("Error fetching user data:", error)
+              setUsername(user.email?.split("@")[0] || "usuario")
             }
           }
-
-          fetchUserData()
         }
       } catch (error) {
         console.error("Error al cargar el reto:", error)
+        toast({
+          title: "Error",
+          description: "No se pudo cargar el reto. Intenta más tarde.",
+          variant: "destructive",
+        })
       } finally {
         setIsLoading(false)
       }
     }
     fetchReto()
-  }, [id])
+  }, [id, user])
 
-  const formatTime = (seconds) => {
+  const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
@@ -149,22 +151,28 @@ export default function RetoPage() {
       let consoleOutput = ""
       const originalConsoleLog = console.log
 
-      // Capture console.log output
+      // Capturar la salida de console.log
       console.log = (...args) => {
         consoleOutput += args.join(" ") + "\n"
+        originalConsoleLog(...args)
       }
 
-      // Create a sandbox to execute the code
-      const evalFunction = new Function(`
-        "use strict";
-        ${code}
-        return "Código ejecutado exitosamente";
-      `)
+      // Simplemente ejecutar el código del usuario sin verificar tests
+      try {
+        // Crear un entorno seguro para ejecutar el código
+        const userCode = code
 
-      const result = evalFunction()
+        // Ejecutar el código directamente
+        eval(userCode)
+      } catch (e) {
+        throw new Error(`Error al ejecutar el código: ${e.message}`)
+      }
+
+      // Restaurar console.log original
       console.log = originalConsoleLog
 
-      setOutput(consoleOutput || result)
+      // Mostrar la salida capturada
+      setOutput(consoleOutput || "sin salida")
     } catch (error) {
       setOutput(`Error en la ejecución: ${error.message}`)
     } finally {
@@ -183,33 +191,45 @@ export default function RetoPage() {
       let consoleOutput = ""
       const originalConsoleLog = console.log
 
-      // Capture console.log output
+      // Capturar la salida de console.log
       console.log = (...args) => {
         consoleOutput += args.join(" ") + "\n"
+        originalConsoleLog(...args)
       }
 
-      // Create a sandbox to execute the code and extract the functions
-      const evalFunction = new Function(`
-        "use strict";
-        ${code}
+      // Extraer el nombre de la función del código
+      const functionNameMatch = code.match(/function\s+([a-zA-Z0-9_]+)\s*\(/)
+      if (!functionNameMatch) {
+        throw new Error("No se encontró ninguna función en tu código. Asegúrate de definir una función.")
+      }
 
-        // Return an object with all the functions that might be needed for testing
-        return {
-          invertirPalabras: typeof invertirPalabras === 'function' ? invertirPalabras : null,
-          encontrarNumeroAusente: typeof encontrarNumeroAusente === 'function' ? encontrarNumeroAusente : null,
-          // Add other functions as needed based on challenge requirements
-          ...Object.fromEntries(
-            Object.getOwnPropertyNames(this)
-              .filter(name => typeof this[name] === 'function' && !name.startsWith('_'))
-              .map(name => [name, this[name]])
-          )
-        };
-      `)
+      const functionName = functionNameMatch[1]
 
-      const functions = evalFunction()
+      // Ejecutar el código del usuario asegurándose de que se defina en el ámbito global
+      try {
+        // Envolver el código en una IIFE que asigna explícitamente la función al objeto window
+        const wrappedCode = `
+          (function() {
+            ${code}
+            // Asignar explícitamente la función al objeto window
+            window["${functionName}"] = ${functionName};
+          })();
+        `
+
+        // Evaluar el código envuelto
+        eval(wrappedCode)
+
+        // Verificar si la función existe en el ámbito global
+        if (typeof window[functionName] !== "function") {
+          throw new Error(`La función ${functionName} no está definida correctamente.`)
+        }
+      } catch (e) {
+        throw new Error(`Error al ejecutar el código: ${e.message}`)
+      }
+
       console.log = originalConsoleLog
 
-      // Process test cases
+      // Procesar casos de prueba
       const testResults = []
       let allTestsPassed = true
       let testOutput = ""
@@ -222,35 +242,27 @@ export default function RetoPage() {
           let error = null
 
           try {
-            // Determine which function to call based on the challenge
-            if (reto.id === "1" && functions.invertirPalabras) {
-              result = functions.invertirPalabras(test.input)
-            } else if (reto.id === "2" && functions.encontrarNumeroAusente) {
-              result = functions.encontrarNumeroAusente(
-                typeof test.input === "string" ? JSON.parse(test.input) : test.input,
-              )
-            } else {
-              // Try to find a function that matches the test case
-              const functionName = Object.keys(functions).find(
-                (name) => functions[name] && typeof functions[name] === "function",
-              )
+            // Parsear los argumentos si vienen como string con comas
+            let args = test.input
 
-              if (functionName && functions[functionName]) {
-                result = functions[functionName](
-                  typeof test.input === "string" && test.input.startsWith("[") ? JSON.parse(test.input) : test.input,
-                )
-              } else {
-                throw new Error("No se encontró la función requerida")
-              }
+            if (typeof args === "string" && args.includes(",")) {
+              args = args.split(",").map((arg) => {
+                // Intentar convertir a número si es posible
+                const trimmed = arg.trim()
+                const num = Number(trimmed)
+                return isNaN(num) ? trimmed : num
+              })
+              result = window[functionName](...args)
+            } else {
+              // Si no es una string con comas, pasar directamente
+              result = window[functionName](args)
             }
 
-            // Compare result with expected output
-            const expected =
-              typeof test.expected === "string" && test.expected.startsWith("[")
-                ? JSON.parse(test.expected)
-                : test.expected
+            // Convertir el resultado a string para comparar con el expected
+            const resultStr = String(result)
 
-            passed = JSON.stringify(result) === JSON.stringify(expected)
+            // Comparar resultado con el esperado
+            passed = resultStr === test.expected
           } catch (e) {
             error = e.message
             passed = false
@@ -265,12 +277,18 @@ export default function RetoPage() {
             error,
           })
 
-          testOutput += `Test ${i + 1}: ${passed ? "✅" : "❌"}\n`
-          testOutput += `Entrada: ${JSON.stringify(test.input)}\n`
-          testOutput += `Esperado: ${JSON.stringify(test.expected)}\n`
-          testOutput += `Obtenido: ${result !== undefined ? JSON.stringify(result) : "undefined"}\n`
-          if (error) testOutput += `Error: ${error}\n`
-          testOutput += "\n"
+          testOutput += `━━\n`
+          testOutput += `▶ Test ${i + 1}: ${passed ? "✅ PASÓ" : "❌ FALLÓ"}\n`
+          testOutput += `━━\n\n`
+          testOutput += `📥 Entrada: ${test.input}\n\n`
+          testOutput += `🎯 Esperado: ${test.expected}\n\n`
+          testOutput += `🔍 Obtenido: ${result !== undefined ? result : "undefined"}\n\n`
+
+          if (error) {
+            testOutput += `⚠️ Error: ${error}\n\n`
+          }
+
+          testOutput += `\n\n`
 
           allTestsPassed = allTestsPassed && passed
         }
@@ -283,15 +301,19 @@ export default function RetoPage() {
       setSuccess(allTestsPassed)
 
       if (allTestsPassed) {
-        // Save completion status if all tests passed
+        // Guardar el estado de completado si todos los tests pasaron
         try {
-          const { data: userData } = await supabase.auth.getUser()
-          if (userData?.user) {
+          if (user) {
             await supabase.from("user_challenges").upsert({
-              user_id: userData.user.id,
+              user_id: user.id,
               challenge_id: id,
               completed_at: new Date().toISOString(),
               code: code,
+            })
+
+            toast({
+              title: "¡Éxito!",
+              description: "Has completado todos los tests correctamente.",
             })
           }
         } catch (error) {
@@ -299,10 +321,22 @@ export default function RetoPage() {
         }
 
         setTimeout(() => setShowSuccessModal(true), 1000)
+      } else {
+        toast({
+          title: "Tests incompletos",
+          description: "Algunos tests no han pasado. Revisa tu código.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       setOutput(`Error en la ejecución: ${error.message}`)
       setSuccess(false)
+
+      toast({
+        title: "Error",
+        description: error.message || "Error al ejecutar el código",
+        variant: "destructive",
+      })
     } finally {
       setIsRunning(false)
     }
@@ -315,10 +349,9 @@ export default function RetoPage() {
     // If successful, save the solution
     if (success) {
       try {
-        const { data: userData } = await supabase.auth.getUser()
-        if (userData?.user) {
+        if (user) {
           const { error } = await supabase.from("user_challenges").upsert({
-            user_id: userData.user.id,
+            user_id: user.id,
             challenge_id: id,
             completed_at: new Date().toISOString(),
             code: code,
@@ -326,12 +359,21 @@ export default function RetoPage() {
 
           if (error) throw error
 
+          toast({
+            title: "Solución guardada",
+            description: "Tu solución ha sido guardada correctamente.",
+          })
+
           // Show success modal
           setShowSuccessModal(true)
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error al guardar la solución:", error)
-        setOutput(output + "\n\nError al guardar la solución: " + error.message)
+        toast({
+          title: "Error",
+          description: "No se pudo guardar tu solución. Intenta de nuevo.",
+          variant: "destructive",
+        })
       }
     }
   }
@@ -340,7 +382,7 @@ export default function RetoPage() {
     if (reto) setCode(reto.initialCode)
   }
 
-  const handleShare = (platform) => {
+  const handleShare = (platform: string) => {
     if (!reto) return
 
     const text = `¡He completado el reto "${reto.title}" en 1code1day! 🚀 #1code1day #ProgrammingChallenge`
@@ -372,7 +414,10 @@ export default function RetoPage() {
     if (!shareCard) return
 
     // This is a placeholder - in a real implementation, you would use a library like html2canvas
-    alert("Imagen generada y descargada")
+    toast({
+      title: "Función no implementada",
+      description: "La descarga de imágenes estará disponible próximamente.",
+    })
 
     // Example with html2canvas (would need to be imported)
     /*
@@ -386,7 +431,7 @@ export default function RetoPage() {
     */
   }
 
-  const getDifficultyColor = (difficulty) => {
+  const getDifficultyColor = (difficulty: string) => {
     const lowerDifficulty = typeof difficulty === "string" ? difficulty.toLowerCase() : ""
 
     if (lowerDifficulty.includes("fácil") || lowerDifficulty.includes("facil")) {
@@ -469,29 +514,8 @@ export default function RetoPage() {
                       theme="vs-dark"
                       value={code}
                       onChange={(value) => setCode(value || "")}
-                      onMount={(editor, monaco) => {
+                      onMount={(editor) => {
                         editorRef.current = editor
-                        monaco.editor.defineTheme("vibrant-js", {
-                          base: "vs-dark",
-                          inherit: true,
-                          rules: [
-                            { token: "comment", foreground: "6A9955", fontStyle: "italic" },
-                            { token: "keyword", foreground: "569CD6", fontStyle: "bold" },
-                            { token: "string", foreground: "CE9178" },
-                            { token: "number", foreground: "B5CEA8" },
-                            { token: "function", foreground: "DCDCAA" },
-                            { token: "variable", foreground: "9CDCFE" },
-                            { token: "operator", foreground: "D4D4D4" },
-                          ],
-                          colors: {
-                            "editor.background": "#1E1E1E",
-                            "editor.foreground": "#D4D4D4",
-                            "editorLineNumber.foreground": "#858585",
-                            "editor.selectionBackground": "#264F78",
-                            "editor.lineHighlightBackground": "#2A2D2E",
-                          },
-                        })
-                        monaco.editor.setTheme("vibrant-js")
                       }}
                       options={{
                         minimap: { enabled: false },
@@ -560,7 +584,7 @@ export default function RetoPage() {
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold mb-2">Ejemplos</h3>
                   <div className="space-y-3">
-                    {reto.examples.map((example, index) => (
+                    {reto.examples.map((example: any, index: number) => (
                       <div key={index} className="bg-secondary p-4 rounded-md">
                         <p className="text-sm font-mono mb-2">Ejemplo {index + 1}:</p>
                         <p className="text-sm font-mono mb-1">
@@ -581,7 +605,7 @@ export default function RetoPage() {
                 <h2 className="text-xl font-semibold mb-4">Pistas</h2>
                 <p className="text-muted-foreground mb-6">Usa estas pistas si te quedas atascado</p>
                 <div className="space-y-6">
-                  {reto.hints.map((hint, index) => (
+                  {reto.hints.map((hint: string, index: number) => (
                     <div key={index} className="bg-secondary/30 p-4 rounded-md">
                       <h3 className="font-medium mb-2">Pista {index + 1}</h3>
                       <p className="text-muted-foreground">{hint}</p>

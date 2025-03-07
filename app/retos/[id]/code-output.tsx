@@ -22,4 +22,5 @@ export function CodeOutput({ value, height = "200px" }) {
   )
 }
 
-export default CodeOutput   
+export default CodeOutput
+

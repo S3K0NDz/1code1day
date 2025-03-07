@@ -33,8 +33,8 @@ export async function middleware(req: NextRequest) {
   // Redirigir a login si la ruta requiere autenticación y no hay sesión
   //if (!isPublicRoute && !session) {
   //  url.pathname = "/login"
- //   return NextResponse.redirect(url)
- // }
+  //   return NextResponse.redirect(url)
+  // }
 
   // Redirigir a la página principal si el usuario ya está autenticado e intenta acceder a rutas de auth
   if (isAuthRoute && session) {

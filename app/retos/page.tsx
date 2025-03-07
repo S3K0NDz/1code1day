@@ -10,6 +10,7 @@ import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
+import { toast } from "@/components/ui/use-toast"
 
 // Categorías para filtrar
 const CATEGORIES = [
@@ -62,47 +63,19 @@ export default function RetosPage() {
           let testCases = []
 
           try {
-            if (typeof reto.examples === "string") {
-              // Verificar si parece un JSON válido
-              if (reto.examples.trim().startsWith("[") || reto.examples.trim().startsWith("{")) {
-                examples = JSON.parse(reto.examples)
-              } else {
-                console.warn("examples no es un JSON válido:", reto.examples)
-                examples = []
-              }
-            } else if (Array.isArray(reto.examples)) {
-              examples = reto.examples
-            }
+            examples = typeof reto.examples === "string" ? JSON.parse(reto.examples) : reto.examples || []
           } catch (e) {
             console.error("Error parsing examples:", e)
           }
 
           try {
-            if (typeof reto.hints === "string") {
-              if (reto.hints.trim().startsWith("[") || reto.hints.trim().startsWith("{")) {
-                hints = JSON.parse(reto.hints)
-              } else {
-                console.warn("hints no es un JSON válido:", reto.hints)
-                hints = []
-              }
-            } else if (Array.isArray(reto.hints)) {
-              hints = reto.hints
-            }
+            hints = typeof reto.hints === "string" ? JSON.parse(reto.hints) : reto.hints || []
           } catch (e) {
             console.error("Error parsing hints:", e)
           }
 
           try {
-            if (typeof reto.testcases === "string") {
-              if (reto.testcases.trim().startsWith("[") || reto.testcases.trim().startsWith("{")) {
-                testCases = JSON.parse(reto.testcases)
-              } else {
-                console.warn("testcases no es un JSON válido:", reto.testcases)
-                testCases = []
-              }
-            } else if (Array.isArray(reto.testcases)) {
-              testCases = reto.testcases
-            }
+            testCases = typeof reto.testcases === "string" ? JSON.parse(reto.testcases) : reto.testcases || []
           } catch (e) {
             console.error("Error parsing testCases:", e)
           }
@@ -118,8 +91,8 @@ export default function RetosPage() {
               month: "long",
               year: "numeric",
             }),
-            completions: Math.floor(Math.random() * 1000), // Datos de ejemplo para completions
-            successRate: Math.floor(Math.random() * 30) + 70, // Datos de ejemplo para success rate
+            completions: reto.completions || Math.floor(Math.random() * 1000), // Usar datos reales si existen
+            successRate: reto.success_rate || Math.floor(Math.random() * 30) + 70, // Usar datos reales si existen
             examples: examples,
             hints: hints,
             testCases: testCases,
@@ -129,6 +102,11 @@ export default function RetosPage() {
         setRetos(formattedRetos)
       } catch (error) {
         console.error("Error al cargar los retos:", error)
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los retos. Intenta más tarde.",
+          variant: "destructive",
+        })
       } finally {
         setIsLoading(false)
       }

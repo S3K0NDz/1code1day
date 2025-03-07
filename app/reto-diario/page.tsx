@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+
 import { useState, useEffect, useRef } from "react"
 import Editor from "@monaco-editor/react"
 import { Button } from "@/components/ui/button"
@@ -15,7 +17,6 @@ import {
   Facebook,
   Twitter,
   Linkedin,
-  Download,
   Calendar,
   ArrowDown,
 } from "lucide-react"
@@ -32,67 +33,26 @@ import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/utils/supabaseClient"
 
-// TypeScript declaration for window.invertirPalabras
+// Eliminar la declaración global de invertirPalabras
 declare global {
   interface Window {
-    invertirPalabras?: (cadena: string) => string
+    [key: string]: any
   }
 }
 
-const DAILY_CHALLENGE = {
-  id: "1",
-  title: "Invertir palabras en una cadena",
-  description:
-    "Dada una cadena de texto, debes invertir cada palabra individualmente, manteniendo el orden original de las palabras. Los espacios entre palabras deben conservarse.",
-  difficulty: "Intermedio",
-  category: "Cadenas de texto",
-  timeLimit: 45,
-  date: "6 Marzo, 2025",
-  completions: 742,
-  successRate: 82,
-  initialCode: `// Escribe tu solución aquí
-function invertirPalabras(cadena) {
-  // Tu código aquí
-  return "";
-}
-
-// Ejemplos de prueba
-console.log(invertirPalabras("Hola mundo")); // Debería mostrar: "aloH odnum"
-console.log(invertirPalabras("El gato con botas")); // Debería mostrar: "lE otag noc satob"
-`,
-  examples: [
-    { input: "Hola mundo", output: "aloH odnum" },
-    { input: "El gato con botas", output: "lE otag noc satob" },
-  ],
-  hints: [
-    "Puedes dividir la cadena en palabras usando el método split() con un espacio como separador.",
-    "Para invertir cada palabra, puedes convertirla en un array de caracteres, invertir el array y luego unirlo de nuevo.",
-    "También puedes invertir una palabra recorriéndola de atrás hacia adelante y construyendo una nueva cadena.",
-  ],
-  testCases: [
-    { input: "Hola mundo", expected: "aloH odnum" },
-    { input: "El gato con botas", expected: "lE otag noc satob" },
-    { input: "JavaScript es genial", expected: "tpircSavaJ se laineg" },
-  ],
-}
-
 export default function RetoDiarioPage() {
-  const [isLoading, setIsLoading] = useState(true)
-  const [hasStarted, setHasStarted] = useState(false)
+  const [dailyChallenge, setDailyChallenge] = useState<any>(null)
   const [code, setCode] = useState("")
+  const [remainingTime, setRemainingTime] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRunning, setIsRunning] = useState(false)
   const [output, setOutput] = useState("")
   const [success, setSuccess] = useState(false)
-  const [isRunning, setIsRunning] = useState(false)
-  const [remainingTime, setRemainingTime] = useState(45 * 60)
-  const editorRef = useRef<any>(null)
+  const [hasStarted, setHasStarted] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [username] = useState("usuario")
-  const [timeUntilNextChallenge, setTimeUntilNextChallenge] = useState({
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  })
-  const { user, isLoading: authLoading } = useAuth()
+  const [timeUntilNextChallenge, setTimeUntilNextChallenge] = useState({ hours: 0, minutes: 0, seconds: 0 })
+  const editorRef = useRef<any>(null)
+  const { user } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -127,87 +87,75 @@ export default function RetoDiarioPage() {
           let testCases = []
 
           try {
-            if (typeof dailyReto.examples === "string") {
-              // Verificar si parece un JSON válido
-              if (dailyReto.examples.trim().startsWith("[") || dailyReto.examples.trim().startsWith("{")) {
-                examples = JSON.parse(dailyReto.examples)
-              } else {
-                console.warn("examples no es un JSON válido:", dailyReto.examples)
-                examples = []
-              }
-            } else if (Array.isArray(dailyReto.examples)) {
-              examples = dailyReto.examples
-            }
+            examples =
+              typeof dailyReto.examples === "string" ? JSON.parse(dailyReto.examples) : dailyReto.examples || []
           } catch (e) {
             console.error("Error parsing examples:", e)
             examples = []
           }
 
           try {
-            if (typeof dailyReto.hints === "string") {
-              if (dailyReto.hints.trim().startsWith("[") || dailyReto.hints.trim().startsWith("{")) {
-                hints = JSON.parse(dailyReto.hints)
-              } else {
-                console.warn("hints no es un JSON válido:", dailyReto.hints)
-                hints = []
-              }
-            } else if (Array.isArray(dailyReto.hints)) {
-              hints = dailyReto.hints
-            }
+            hints = typeof dailyReto.hints === "string" ? JSON.parse(dailyReto.hints) : dailyReto.hints || []
           } catch (e) {
             console.error("Error parsing hints:", e)
             hints = []
           }
 
           try {
-            if (typeof dailyReto.testcases === "string") {
-              if (dailyReto.testcases.trim().startsWith("[") || dailyReto.testcases.trim().startsWith("{")) {
-                testCases = JSON.parse(dailyReto.testcases)
-              } else {
-                console.warn("testcases no es un JSON válido:", dailyReto.testcases)
-                testCases = []
-              }
-            } else if (Array.isArray(dailyReto.testcases)) {
-              testCases = dailyReto.testcases
-            }
+            testCases =
+              typeof dailyReto.testcases === "string" ? JSON.parse(dailyReto.testcases) : dailyReto.testcases || []
           } catch (e) {
             console.error("Error parsing testCases:", e)
             testCases = []
           }
 
-          // Si hay un reto diario, actualizar el estado
-          setCode(dailyReto.initialcode || DAILY_CHALLENGE.initialCode)
-          setRemainingTime((dailyReto.timelimit || DAILY_CHALLENGE.timeLimit) * 60)
+          // Actualizar el estado con los datos del reto
+          setCode(dailyReto.initialcode || "")
+          setRemainingTime((dailyReto.timelimit || 45) * 60)
 
-          // También podríamos actualizar el DAILY_CHALLENGE con los datos reales
-          Object.assign(DAILY_CHALLENGE, {
+          // Guardar todos los datos del reto en el estado
+          setDailyChallenge({
             id: dailyReto.id,
             title: dailyReto.title,
             description: dailyReto.description,
             difficulty: dailyReto.difficulty,
             category: dailyReto.category,
-            timeLimit: dailyReto.timelimit || DAILY_CHALLENGE.timeLimit,
+            timeLimit: dailyReto.timelimit || 45,
+            date: new Date(dailyReto.daily_date).toLocaleDateString("es-ES", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }),
+            completions: dailyReto.completions || 0,
+            successRate: dailyReto.success_rate || 0,
+            initialCode: dailyReto.initialcode,
             examples: examples,
             hints: hints,
             testCases: testCases,
           })
         } else {
-          // Si no hay reto diario programado, usar el predeterminado
-          setCode(DAILY_CHALLENGE.initialCode)
-          setRemainingTime(DAILY_CHALLENGE.timeLimit * 60)
+          // Si no hay reto diario programado, mostrar un mensaje
+          toast({
+            title: "No hay reto diario",
+            description: "No hay un reto programado para hoy. Intenta más tarde.",
+            variant: "destructive",
+          })
+          router.push("/retos")
         }
       } catch (error) {
         console.error("Error al cargar el reto diario:", error)
-        // En caso de error, usar el reto predeterminado
-        setCode(DAILY_CHALLENGE.initialCode)
-        setRemainingTime(DAILY_CHALLENGE.timeLimit * 60)
+        toast({
+          title: "Error",
+          description: "No se pudo cargar el reto diario. Intenta más tarde.",
+          variant: "destructive",
+        })
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchDailyChallenge()
-  }, [])
+  }, [router])
 
   useEffect(() => {
     const calculateTimeUntilNextChallenge = () => {
@@ -244,8 +192,9 @@ export default function RetoDiarioPage() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }
 
-  // Ejecutar: Simply run the code like in the HTML example
   const runCode = () => {
+    if (!dailyChallenge) return
+
     setIsRunning(true)
     setOutput("")
 
@@ -257,25 +206,62 @@ export default function RetoDiarioPage() {
         originalConsoleLog(...args)
       }
 
-      eval(code) // Direct execution like the HTML example
-      setOutput(consoleOutput)
+      // Evaluar el código del usuario en un entorno seguro
+      const result = new Function(`
+        ${code}
+        // Ejecutar ejemplos si existen
+        try {
+          ${
+            dailyChallenge.examples && dailyChallenge.examples.length > 0
+              ? dailyChallenge.examples
+                  .map(
+                    (ex) =>
+                      `console.log("Ejemplo: Input:", ${JSON.stringify(ex.input)});
+                 // Buscar la función principal
+                 const functionNames = Object.keys(this).filter(key => 
+                   typeof this[key] === 'function' && !key.startsWith('_')
+                 );
+                 if (functionNames.length > 0) {
+                   const result = this[functionNames[0]](${JSON.stringify(ex.input)});
+                   console.log("Output:", result);
+                 }`,
+                  )
+                  .join("\n")
+              : "// No hay ejemplos disponibles"
+          }
+        } catch (e) {
+          console.log("Error al ejecutar ejemplos:", e.message);
+        }
+        return "Código ejecutado";
+      `)()
+
+      setOutput(consoleOutput || result)
       console.log = originalConsoleLog
     } catch (error) {
-      setOutput(`Error: ${(error as Error).message}`)
+      setOutput(`Error: ${error.message}`)
     } finally {
       setIsRunning(false)
     }
   }
 
-  // Comprobar: Run test cases to verify the solution
   const handleCheckCode = () => {
+    if (!dailyChallenge) return
+
     setIsRunning(true)
     setOutput("")
 
     try {
+      // Crear una función segura para evaluar el código del usuario
       const userFunction = new Function(`
         ${code}
-        return invertirPalabras;
+        // Extraer todas las funciones definidas
+        const functions = {};
+        for (const key in this) {
+          if (typeof this[key] === 'function' && !key.startsWith('_')) {
+            functions[key] = this[key];
+          }
+        }
+        return functions;
       `)()
 
       let consoleOutput = ""
@@ -286,11 +272,62 @@ export default function RetoDiarioPage() {
       }
 
       let allTestsPassed = true
-      DAILY_CHALLENGE.testCases.forEach((test, index) => {
-        const result = userFunction(test.input)
-        const passed = result === test.expected
-        consoleOutput += `Test ${index + 1}: Input: "${test.input}" -> Output: "${result}" (Expected: "${test.expected}") - ${passed ? "✅ Passed" : "❌ Failed"}<br>`
-        if (!passed) allTestsPassed = false
+
+      if (!dailyChallenge.testCases || dailyChallenge.testCases.length === 0) {
+        setOutput("No hay casos de prueba definidos para este reto.")
+        setIsRunning(false)
+        return
+      }
+
+      // Intentar encontrar la función principal
+      const functionNames = Object.keys(userFunction)
+      if (functionNames.length === 0) {
+        throw new Error("No se encontró ninguna función en tu código.")
+      }
+
+      // Usar la primera función encontrada o buscar una que coincida con el patrón del reto
+      const mainFunctionName = functionNames[0]
+      const mainFunction = userFunction[mainFunctionName]
+
+      if (!mainFunction) {
+        throw new Error(`No se encontró la función ${mainFunctionName}.`)
+      }
+
+      dailyChallenge.testCases.forEach((test, index) => {
+        try {
+          // Preparar el input según su tipo
+          let input = test.input
+          if (typeof input === "string" && (input.startsWith("[") || input.startsWith("{"))) {
+            try {
+              input = JSON.parse(input)
+            } catch (e) {
+              // Si no se puede parsear, usar como string
+            }
+          }
+
+          // Ejecutar la función con el input
+          const result = mainFunction(input)
+
+          // Preparar el valor esperado
+          let expected = test.expected
+          if (typeof expected === "string" && (expected.startsWith("[") || expected.startsWith("{"))) {
+            try {
+              expected = JSON.parse(expected)
+            } catch (e) {
+              // Si no se puede parsear, usar como string
+            }
+          }
+
+          // Comparar resultado con el esperado
+          const passed = JSON.stringify(result) === JSON.stringify(expected)
+
+          consoleOutput += `Test ${index + 1}: Input: "${JSON.stringify(input)}" -> Output: "${JSON.stringify(result)}" (Expected: "${JSON.stringify(expected)}") - ${passed ? "✅ Passed" : "❌ Failed"}<br>`
+
+          if (!passed) allTestsPassed = false
+        } catch (error) {
+          consoleOutput += `Test ${index + 1}: Error - ${error.message}<br>`
+          allTestsPassed = false
+        }
       })
 
       console.log = originalConsoleLog
@@ -300,82 +337,88 @@ export default function RetoDiarioPage() {
         setSuccess(true)
         setOutput((prev) => prev + "<br>✅ ¡Felicidades! Todos los tests pasaron.")
         setTimeout(() => setShowSuccessModal(true), 1000)
+
+        // Guardar la solución en la base de datos
+        if (user) {
+          try {
+            supabase.from("user_challenges").upsert({
+              user_id: user.id,
+              challenge_id: dailyChallenge.id,
+              completed_at: new Date().toISOString(),
+              code: code,
+            })
+          } catch (error) {
+            console.error("Error al guardar la solución:", error)
+          }
+        }
       } else {
         setSuccess(false)
         setOutput((prev) => prev + "<br>❌ Algunos tests fallaron.")
       }
     } catch (error) {
-      setOutput(`Error: ${(error as Error).message}`)
+      setOutput(`Error: ${error.message}`)
     } finally {
       setIsRunning(false)
     }
   }
 
-  // Enviar: Simulate submitting the solution
-  const handleSubmit = () => {
-    setIsRunning(true)
-    setOutput("")
+  const handleSubmit = async () => {
+    if (!dailyChallenge) return
 
-    try {
-      const userFunction = new Function(`
-        ${code}
-        return invertirPalabras;
-      `)()
+    // Primero verificar si todos los tests pasan
+    await handleCheckCode()
 
-      const isCorrect = DAILY_CHALLENGE.testCases.every((test) => userFunction(test.input) === test.expected)
+    // Si la solución es correcta, guardarla en la base de datos
+    if (success) {
+      try {
+        if (user) {
+          const { error } = await supabase.from("user_challenges").upsert({
+            user_id: user.id,
+            challenge_id: dailyChallenge.id,
+            completed_at: new Date().toISOString(),
+            code: code,
+          })
 
-      if (isCorrect) {
-        setOutput("✅ Solución enviada correctamente. ¡Éxito!")
-        setSuccess(true)
-        setTimeout(() => setShowSuccessModal(true), 1000)
-      } else {
-        setOutput("❌ La solución no pasa todos los tests. Por favor, verifica tu código.")
+          if (error) throw error
+
+          toast({
+            title: "Solución guardada",
+            description: "Tu solución ha sido guardada correctamente.",
+          })
+        }
+      } catch (error) {
+        console.error("Error al guardar la solución:", error)
+        toast({
+          title: "Error",
+          description: "No se pudo guardar tu solución. Intenta de nuevo.",
+          variant: "destructive",
+        })
       }
-      // Here you could add an API call to submit the code, e.g.:
-      // await fetch('/api/submit', { method: 'POST', body: JSON.stringify({ code }) });
-    } catch (error) {
-      setOutput(`Error al enviar: ${(error as Error).message}`)
-    } finally {
-      setIsRunning(false)
     }
   }
 
-  const resetCode = () => setCode(DAILY_CHALLENGE.initialCode)
+  const resetCode = () => {
+    if (dailyChallenge) {
+      setCode(dailyChallenge.initialCode)
+    }
+  }
 
   const handleShare = (platform: string) => {
-    const text = `¡He completado el reto "${DAILY_CHALLENGE.title}" en 1code1day! 🚀 #1code1day`
-    const url = window.location.href
+    const text = `¡He completado el reto "${dailyChallenge?.title}" en 1code1day! 🚀 #1code1day`
+    const url = `https://1code1day.vercel.app/reto-diario`
 
-    let shareUrl = ""
-    switch (platform) {
-      case "twitter":
-        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
-        break
-      case "facebook":
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
-        break
-      case "linkedin":
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&summary=${encodeURIComponent(text)}`
-        break
-    }
-
-    if (shareUrl) window.open(shareUrl, "_blank", "width=600,height=400")
-  }
-
-  const generateImage = () => {
-    alert("Imagen generada y descargada")
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "Fácil":
-        return "bg-green-500/20 text-green-500"
-      case "Intermedio":
-        return "bg-yellow-500/20 text-yellow-500"
-      case "Difícil":
-        return "bg-red-500/20 text-red-500"
-      default:
-        return "bg-blue-500/20 text-blue-500"
+    if (platform === "facebook") {
+      window.open(
+        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`,
+        "_blank",
+      )
+    } else if (platform === "twitter") {
+      window.open(
+        `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+        "_blank",
+      )
+    } else if (platform === "linkedin") {
+      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, "_blank")
     }
   }
 
@@ -395,10 +438,23 @@ export default function RetoDiarioPage() {
     }
 
     setHasStarted(true)
-    setRemainingTime(DAILY_CHALLENGE.timeLimit * 60)
+    setRemainingTime(dailyChallenge?.timeLimit * 60 || 45 * 60)
   }
 
-  if (isLoading || authLoading) {
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case "Fácil":
+        return "bg-green-500/20 text-green-500"
+      case "Intermedio":
+        return "bg-yellow-500/20 text-yellow-500"
+      case "Difícil":
+        return "bg-red-500/20 text-red-500"
+      default:
+        return "bg-blue-500/20 text-blue-500"
+    }
+  }
+
+  if (isLoading) {
     return (
       <InteractiveGridBackground>
         <div className="min-h-screen flex items-center justify-center">
@@ -425,9 +481,11 @@ export default function RetoDiarioPage() {
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                     <div className="flex items-center mb-4 md:mb-0">
                       <h1 className="text-2xl sm:text-3xl font-bold mr-3">Reto Diario</h1>
-                      <Badge className={`${getDifficultyColor(DAILY_CHALLENGE.difficulty)} text-sm px-3 py-1`}>
-                        {DAILY_CHALLENGE.difficulty}
-                      </Badge>
+                      {dailyChallenge && (
+                        <Badge className={`${getDifficultyColor(dailyChallenge.difficulty)} text-sm px-3 py-1`}>
+                          {dailyChallenge.difficulty}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center bg-black/30 px-4 py-2 rounded-md text-sm sm:text-base">
                       <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-500" />
@@ -438,48 +496,63 @@ export default function RetoDiarioPage() {
                       </span>
                     </div>
                   </div>
-                  <h2 className="text-4xl font-bold mb-4">{DAILY_CHALLENGE.title}</h2>
-                  <div className="flex flex-wrap items-center text-muted-foreground mb-6 text-xs sm:text-sm gap-y-1">
-                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
-                    <span>{DAILY_CHALLENGE.date}</span>
-                    <span className="mx-2">•</span>
-                    <span>{DAILY_CHALLENGE.category}</span>
-                    <span className="mx-2">•</span>
-                    <span>{DAILY_CHALLENGE.completions} soluciones</span>
-                    <span className="mx-2">•</span>
-                    <span>Éxito: {DAILY_CHALLENGE.successRate}%</span>
-                  </div>
-                  <div className="bg-black/20 p-6 rounded-lg">
-                    <p className="text-xl leading-relaxed">{DAILY_CHALLENGE.description}</p>
-                  </div>
-                  <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    {DAILY_CHALLENGE.examples.map((example, index) => (
-                      <div key={index} className="bg-black/30 p-4 rounded-md">
-                        <p className="text-sm font-mono mb-2 text-muted-foreground">Ejemplo {index + 1}:</p>
-                        <p className="text-sm font-mono mb-1">
-                          Entrada: <span className="text-green-400">{example.input}</span>
-                        </p>
-                        <p className="text-sm font-mono">
-                          Salida: <span className="text-blue-400">{example.output}</span>
-                        </p>
+                  {dailyChallenge ? (
+                    <>
+                      <h2 className="text-4xl font-bold mb-4">{dailyChallenge.title}</h2>
+                      <div className="flex flex-wrap items-center text-muted-foreground mb-6 text-xs sm:text-sm gap-y-1">
+                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
+                        <span>{dailyChallenge.date}</span>
+                        <span className="mx-2">•</span>
+                        <span>{dailyChallenge.category}</span>
+                        <span className="mx-2">•</span>
+                        <span>{dailyChallenge.completions} soluciones</span>
+                        <span className="mx-2">•</span>
+                        <span>Éxito: {dailyChallenge.successRate}%</span>
                       </div>
-                    ))}
-                  </div>
-                  <div className="mt-8 flex flex-col items-center">
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-auto">
-                      <Button size="lg" className="px-8 py-6 text-lg group w-full sm:w-auto" onClick={handleStart}>
-                        <motion.span
-                          initial={{ y: 0 }}
-                          animate={{ y: [0, -5, 0] }}
-                          transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.5, ease: "easeInOut" }}
-                          className="flex items-center"
+                      <div className="bg-black/20 p-6 rounded-lg">
+                        <p className="text-xl leading-relaxed">{dailyChallenge.description}</p>
+                      </div>
+                      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        {dailyChallenge.examples.map((example, index) => (
+                          <div key={index} className="bg-black/30 p-4 rounded-md">
+                            <p className="text-sm font-mono mb-2 text-muted-foreground">Ejemplo {index + 1}:</p>
+                            <p className="text-sm font-mono mb-1">
+                              Entrada: <span className="text-green-400">{example.input}</span>
+                            </p>
+                            <p className="text-sm font-mono">
+                              Salida: <span className="text-blue-400">{example.output}</span>
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-8 flex flex-col items-center">
+                        <motion.div
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="w-full sm:w-auto"
                         >
-                          Comenzar
-                          <ArrowDown className="ml-2 h-5 w-5 transition" />
-                        </motion.span>
-                      </Button>
-                    </motion.div>
-                  </div>
+                          <Button size="lg" className="px-8 py-6 text-lg group w-full sm:w-auto" onClick={handleStart}>
+                            <motion.span
+                              initial={{ y: 0 }}
+                              animate={{ y: [0, -5, 0] }}
+                              transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.5, ease: "easeInOut" }}
+                              className="flex items-center"
+                            >
+                              Comenzar
+                              <ArrowDown className="ml-2 h-5 w-5 transition" />
+                            </motion.span>
+                          </Button>
+                        </motion.div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-xl mb-4">No hay reto diario disponible</p>
+                      <Link href="/retos">
+                        <Button>Ver otros retos</Button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ) : (
@@ -491,10 +564,12 @@ export default function RetoDiarioPage() {
               >
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-4 bg-black/30 p-3 rounded-lg">
                   <div className="flex items-center">
-                    <h2 className="text-lg font-bold mr-2">{DAILY_CHALLENGE.title}</h2>
-                    <Badge className={`${getDifficultyColor(DAILY_CHALLENGE.difficulty)}`}>
-                      {DAILY_CHALLENGE.difficulty}
-                    </Badge>
+                    <h2 className="text-lg font-bold mr-2">{dailyChallenge?.title}</h2>
+                    {dailyChallenge && (
+                      <Badge className={`${getDifficultyColor(dailyChallenge.difficulty)}`}>
+                        {dailyChallenge.difficulty}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start sm:gap-4">
                     <div className="flex items-center bg-black/50 px-3 py-1 rounded-md">
@@ -601,49 +676,53 @@ export default function RetoDiarioPage() {
                     </div>
                   </TabsContent>
                   <TabsContent value="descripcion" className="flex-1">
-                    <div className="border border-border bg-card/50 p-6 rounded-lg">
-                      <h2 className="text-xl font-semibold mb-4">{DAILY_CHALLENGE.title}</h2>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <Badge className={getDifficultyColor(DAILY_CHALLENGE.difficulty)}>
-                          {DAILY_CHALLENGE.difficulty}
-                        </Badge>
-                        <Badge variant="outline">{DAILY_CHALLENGE.category}</Badge>
+                    {dailyChallenge && (
+                      <div className="border border-border bg-card/50 p-6 rounded-lg">
+                        <h2 className="text-xl font-semibold mb-4">{dailyChallenge.title}</h2>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <Badge className={getDifficultyColor(dailyChallenge.difficulty)}>
+                            {dailyChallenge.difficulty}
+                          </Badge>
+                          <Badge variant="outline">{dailyChallenge.category}</Badge>
+                        </div>
+                        <div className="mb-6">
+                          <h3 className="text-lg font-semibold mb-2">Descripción</h3>
+                          <p className="text-muted-foreground">{dailyChallenge.description}</p>
+                        </div>
+                        <div className="mb-6">
+                          <h3 className="text-lg font-semibold mb-2">Ejemplos</h3>
+                          <div className="space-y-3">
+                            {dailyChallenge.examples.map((example, index) => (
+                              <div key={index} className="bg-secondary p-4 rounded-md">
+                                <p className="text-sm font-mono mb-2">Ejemplo {index + 1}:</p>
+                                <p className="text-sm font-mono mb-1">
+                                  Entrada: <span className="text-green-400">{example.input}</span>
+                                </p>
+                                <p className="text-sm font-mono">
+                                  Salida: <span className="text-blue-400">{example.output}</span>
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div className="mb-6">
-                        <h3 className="text-lg font-semibold mb-2">Descripción</h3>
-                        <p className="text-muted-foreground">{DAILY_CHALLENGE.description}</p>
-                      </div>
-                      <div className="mb-6">
-                        <h3 className="text-lg font-semibold mb-2">Ejemplos</h3>
-                        <div className="space-y-3">
-                          {DAILY_CHALLENGE.examples.map((example, index) => (
-                            <div key={index} className="bg-secondary p-4 rounded-md">
-                              <p className="text-sm font-mono mb-2">Ejemplo {index + 1}:</p>
-                              <p className="text-sm font-mono mb-1">
-                                Entrada: <span className="text-green-400">{example.input}</span>
-                              </p>
-                              <p className="text-sm font-mono">
-                                Salida: <span className="text-blue-400">{example.output}</span>
-                              </p>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="pistas" className="flex-1">
+                    {dailyChallenge && (
+                      <div className="border border-border bg-card/50 p-6 rounded-lg">
+                        <h2 className="text-xl font-semibold mb-4">Pistas</h2>
+                        <p className="text-muted-foreground mb-6">Usa estas pistas si te quedas atascado</p>
+                        <div className="space-y-6">
+                          {dailyChallenge.hints.map((hint, index) => (
+                            <div key={index} className="bg-secondary/30 p-4 rounded-md">
+                              <h3 className="font-medium mb-2">Pista {index + 1}</h3>
+                              <p className="text-muted-foreground">{hint}</p>
                             </div>
                           ))}
                         </div>
                       </div>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="pistas" className="flex-1">
-                    <div className="border border-border bg-card/50 p-6 rounded-lg">
-                      <h2 className="text-xl font-semibold mb-4">Pistas</h2>
-                      <p className="text-muted-foreground mb-6">Usa estas pistas si te quedas atascado</p>
-                      <div className="space-y-6">
-                        {DAILY_CHALLENGE.hints.map((hint, index) => (
-                          <div key={index} className="bg-secondary/30 p-4 rounded-md">
-                            <h3 className="font-medium mb-2">Pista {index + 1}</h3>
-                            <p className="text-muted-foreground">{hint}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    )}
                   </TabsContent>
                 </Tabs>
               </motion.div>
@@ -665,10 +744,10 @@ export default function RetoDiarioPage() {
                 <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                   <div className="text-center">
                     <div className="mb-4 text-base sm:text-lg">
-                      ¡Felicidades, <span className="font-bold">{username}</span>!
+                      ¡Felicidades, <span className="font-bold">{user?.email?.split("@")[0] || "usuario"}</span>!
                     </div>
                     <p className="text-muted-foreground text-sm sm:text-base">
-                      Has completado exitosamente el reto <span className="font-bold">{DAILY_CHALLENGE.title}</span>.
+                      Has completado exitosamente el reto <span className="font-bold">{dailyChallenge?.title}</span>.
                     </p>
                   </div>
                   <div className="relative border border-border rounded-lg overflow-hidden" id="share-card">
@@ -681,15 +760,19 @@ export default function RetoDiarioPage() {
                         </span>
                       </div>
                       <div className="text-center mb-4">
-                        <div className="text-lg sm:text-xl font-bold mb-1">{username}</div>
+                        <div className="text-lg sm:text-xl font-bold mb-1">
+                          {user?.email?.split("@")[0] || "usuario"}
+                        </div>
                         <div className="text-muted-foreground text-sm">ha completado el reto</div>
-                        <div className="text-lg sm:text-xl font-bold mt-1">{DAILY_CHALLENGE.title}</div>
+                        <div className="text-lg sm:text-xl font-bold mt-1">{dailyChallenge?.title}</div>
                       </div>
-                      <div
-                        className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(DAILY_CHALLENGE.difficulty)}`}
-                      >
-                        {DAILY_CHALLENGE.difficulty}
-                      </div>
+                      {dailyChallenge && (
+                        <div
+                          className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(dailyChallenge.difficulty)}`}
+                        >
+                          {dailyChallenge.difficulty}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="text-center">
@@ -718,9 +801,6 @@ export default function RetoDiarioPage() {
                         title="Compartir en LinkedIn"
                       >
                         <Linkedin className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </Button>
-                      <Button variant="outline" size="icon" onClick={generateImage} title="Descargar imagen">
-                        <Download className="h-4 w-4 sm:h-5 sm:w-5" />
                       </Button>
                     </div>
                   </div>
