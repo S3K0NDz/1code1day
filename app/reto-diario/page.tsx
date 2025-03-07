@@ -32,6 +32,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/utils/supabaseClient"
+import { saveCompletedChallenge } from "@/lib/db-functions"
 
 // Eliminar la declaración global de invertirPalabras
 declare global {
@@ -236,7 +237,7 @@ export default function RetoDiarioPage() {
     }
   }
 
-  const handleCheckCode = () => {
+  const handleCheckCode = async () => {
     if (!dailyChallenge) return
 
     setIsRunning(true)
@@ -378,12 +379,20 @@ export default function RetoDiarioPage() {
         // Guardar la solución en la base de datos
         if (user) {
           try {
-            supabase.from("user_challenges").upsert({
+            const challengeData = {
               user_id: user.id,
               challenge_id: dailyChallenge.id,
               completed_at: new Date().toISOString(),
               code: code,
-            })
+              is_saved: true, // Automáticamente guardar los retos diarios completados
+              execution_time: remainingTime, // Guardar el tiempo que le tomó completar el reto
+            }
+
+            const result = await saveCompletedChallenge(challengeData)
+
+            if (!result.success) {
+              console.error("Error al guardar la solución:", result.error)
+            }
           } catch (error) {
             console.error("Error al guardar la solución:", error)
           }
@@ -409,14 +418,20 @@ export default function RetoDiarioPage() {
     if (success) {
       try {
         if (user) {
-          const { error } = await supabase.from("user_challenges").upsert({
+          const challengeData = {
             user_id: user.id,
             challenge_id: dailyChallenge.id,
             completed_at: new Date().toISOString(),
             code: code,
-          })
+            is_saved: true,
+            execution_time: remainingTime,
+          }
 
-          if (error) throw error
+          const result = await saveCompletedChallenge(challengeData)
+
+          if (!result.success) {
+            throw new Error("No se pudo guardar la solución")
+          }
 
           toast({
             title: "Solución guardada",

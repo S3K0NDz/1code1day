@@ -30,6 +30,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { toast } from "@/components/ui/use-toast"
 import { supabase } from "@/utils/supabaseClient"
 import { useAuth } from "@/components/auth-provider"
+import { saveCompletedChallenge, toggleSavedChallenge } from "@/lib/db-functions"
 
 export default function RetoPage() {
   const params = useParams()
@@ -46,6 +47,7 @@ export default function RetoPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [username, setUsername] = useState("usuario")
   const [testResults, setTestResults] = useState<any[]>([])
+  const [isSaved, setIsSaved] = useState(false)
   const { user } = useAuth()
 
   useEffect(() => {
@@ -126,6 +128,28 @@ export default function RetoPage() {
     }
     fetchReto()
   }, [id, user])
+
+  // Verificar si el reto está guardado
+  useEffect(() => {
+    const checkIfSaved = async () => {
+      if (user && reto) {
+        try {
+          const { data } = await supabase
+            .from("user_challenges")
+            .select("is_saved")
+            .eq("user_id", user.id)
+            .eq("challenge_id", reto.id)
+            .maybeSingle()
+
+          setIsSaved(!!data?.is_saved)
+        } catch (error) {
+          console.error("Error al verificar si el reto está guardado:", error)
+        }
+      }
+    }
+
+    checkIfSaved()
+  }, [user, reto])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -298,18 +322,24 @@ export default function RetoPage() {
 
       setTestResults(testResults)
       setOutput(consoleOutput + "\n" + testOutput)
-      setSuccess(allTestsPassed)
 
       if (allTestsPassed) {
         // Guardar el estado de completado si todos los tests pasaron
         try {
           if (user) {
-            await supabase.from("user_challenges").upsert({
+            const challengeData = {
               user_id: user.id,
               challenge_id: id,
               completed_at: new Date().toISOString(),
               code: code,
-            })
+              is_saved: isSaved, // Mantener el estado de guardado actual
+            }
+
+            const result = await saveCompletedChallenge(challengeData)
+
+            if (!result.success) {
+              console.error("Error saving completion status:", result.error)
+            }
 
             toast({
               title: "¡Éxito!",
@@ -320,8 +350,10 @@ export default function RetoPage() {
           console.error("Error saving completion status:", error)
         }
 
+        setSuccess(true)
         setTimeout(() => setShowSuccessModal(true), 1000)
       } else {
+        setSuccess(false)
         toast({
           title: "Tests incompletos",
           description: "Algunos tests no han pasado. Revisa tu código.",
@@ -346,18 +378,23 @@ export default function RetoPage() {
     // First check if all tests pass
     await handleCheckCode()
 
-    // If successful, save the solution
+    // Si la solución es correcta, guardarla en la base de datos
     if (success) {
       try {
         if (user) {
-          const { error } = await supabase.from("user_challenges").upsert({
+          const challengeData = {
             user_id: user.id,
             challenge_id: id,
             completed_at: new Date().toISOString(),
             code: code,
-          })
+            is_saved: isSaved, // Mantener el estado de guardado actual
+          }
 
-          if (error) throw error
+          const result = await saveCompletedChallenge(challengeData)
+
+          if (!result.success) {
+            throw new Error("No se pudo guardar la solución")
+          }
 
           toast({
             title: "Solución guardada",
@@ -367,7 +404,7 @@ export default function RetoPage() {
           // Show success modal
           setShowSuccessModal(true)
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error al guardar la solución:", error)
         toast({
           title: "Error",
@@ -380,6 +417,33 @@ export default function RetoPage() {
 
   const resetCode = () => {
     if (reto) setCode(reto.initialCode)
+  }
+
+  const handleToggleSave = async () => {
+    if (!user || !reto) return
+
+    try {
+      const result = await toggleSavedChallenge(user.id, reto.id, !isSaved)
+
+      if (result.success) {
+        setIsSaved(!isSaved)
+        toast({
+          title: isSaved ? "Reto eliminado de guardados" : "Reto guardado",
+          description: isSaved
+            ? "El reto ha sido eliminado de tus guardados"
+            : "El reto ha sido añadido a tus guardados",
+        })
+      } else {
+        throw new Error("No se pudo actualizar el estado del reto")
+      }
+    } catch (error) {
+      console.error("Error al guardar/quitar el reto:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el estado del reto. Intenta de nuevo.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleShare = (platform: string) => {
@@ -536,6 +600,14 @@ export default function RetoPage() {
                     <Button variant="outline" size="sm" onClick={resetCode}>
                       <RefreshCw className="h-4 w-4 mr-1.5" />
                       Reiniciar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleToggleSave}
+                      className={isSaved ? "bg-primary/10" : ""}
+                    >
+                      {isSaved ? "Quitar de guardados" : "Guardar reto"}
                     </Button>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={runCode} disabled={isRunning}>

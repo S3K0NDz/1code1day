@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -24,10 +24,19 @@ import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import { Progress } from "@/components/ui/progress"
+import { getUserCompletedChallenges } from "@/lib/db-functions"
+import { supabase } from "@/lib/supabase"
 
+// Reemplazar la definición de la función PerfilPage para incluir la obtención de datos reales
 export default function PerfilPage() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
+  const [userStats, setUserStats] = useState({
+    completedChallenges: 0,
+    streak: 0,
+    level: 0,
+  })
+  const [loadingStats, setLoadingStats] = useState(true)
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -35,7 +44,61 @@ export default function PerfilPage() {
     }
   }, [user, isLoading, router])
 
-  if (isLoading) {
+  // Obtener estadísticas reales del usuario
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      if (!user) return
+
+      try {
+        setLoadingStats(true)
+
+        // Obtener retos completados
+        const completedResult = await getUserCompletedChallenges(user.id)
+        const completedCount = completedResult.success ? completedResult.data.length : 0
+
+        // Obtener racha del usuario (desde metadatos o tabla de estadísticas)
+        let streak = 0
+        let level = 0
+
+        try {
+          // Intentar obtener datos de la tabla de estadísticas si existe
+          const { data: statsData } = await supabase
+            .from("user_stats")
+            .select("streak, level")
+            .eq("user_id", user.id)
+            .single()
+
+          if (statsData) {
+            streak = statsData.streak || 0
+            level = statsData.level || 0
+          } else {
+            // Usar valores de los metadatos como respaldo
+            streak = user.user_metadata?.streak || 7
+            level = user.user_metadata?.level || Math.floor(completedCount / 5) + 1
+          }
+        } catch (error) {
+          console.error("Error fetching user stats:", error)
+          // Valores por defecto si hay error
+          streak = user.user_metadata?.streak || 7
+          level = user.user_metadata?.level || Math.floor(completedCount / 5) + 1
+        }
+
+        setUserStats({
+          completedChallenges: completedCount,
+          streak,
+          level,
+        })
+      } catch (error) {
+        console.error("Error fetching user stats:", error)
+      } finally {
+        setLoadingStats(false)
+      }
+    }
+
+    fetchUserStats()
+  }, [user])
+
+  if (isLoading || loadingStats) {
     return (
       <InteractiveGridBackground>
         <div className="min-h-screen flex items-center justify-center">
@@ -70,9 +133,9 @@ export default function PerfilPage() {
     email,
     memberSince,
     isPro: user.user_metadata?.is_pro || false,
-    completedChallenges: user.user_metadata?.completed_challenges || 0,
-    streak: user.user_metadata?.streak || 7, // Añadir racha
-    level: user.user_metadata?.level || 12, // Añadir nivel
+    completedChallenges: userStats.completedChallenges,
+    streak: userStats.streak,
+    level: userStats.level,
     github: user.user_metadata?.user_name || user.user_metadata?.github || "",
     twitter: user.user_metadata?.twitter || "",
     linkedin: user.user_metadata?.linkedin || "",
@@ -85,16 +148,19 @@ export default function PerfilPage() {
       title: "Invertir palabras en una cadena",
       date: "Hace 2 días",
       type: "challenge",
+      id: 1,
     },
     {
       title: "Encontrar el número ausente",
       date: "Hace 5 días",
       type: "challenge",
+      id: 2,
     },
     {
       title: "Detectar palíndromos",
       date: "Hace 1 semana",
       type: "challenge",
+      id: 3,
     },
   ]
 
@@ -184,18 +250,24 @@ export default function PerfilPage() {
                 <p className="text-sm mb-4">{userProfile.bio}</p>
 
                 <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <Trophy className="h-3.5 w-3.5" />
-                    <span>{userProfile.completedChallenges} retos completados</span>
-                  </Badge>
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <Flame className="h-3.5 w-3.5" />
-                    <span>Racha: {userProfile.streak} días</span>
-                  </Badge>
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>Nivel: {userProfile.level}</span>
-                  </Badge>
+                  <Link href="/perfil/retos">
+                    <Badge variant="outline" className="flex items-center gap-1 hover:bg-primary/10 cursor-pointer">
+                      <Trophy className="h-3.5 w-3.5" />
+                      <span>{loadingStats ? "..." : userProfile.completedChallenges} retos completados</span>
+                    </Badge>
+                  </Link>
+                  <Link href="/perfil/estadisticas">
+                    <Badge variant="outline" className="flex items-center gap-1 hover:bg-primary/10 cursor-pointer">
+                      <Flame className="h-3.5 w-3.5" />
+                      <span>Racha: {loadingStats ? "..." : userProfile.streak} días</span>
+                    </Badge>
+                  </Link>
+                  <Link href="/perfil/nivel">
+                    <Badge variant="outline" className="flex items-center gap-1 hover:bg-primary/10 cursor-pointer">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>Nivel: {loadingStats ? "..." : userProfile.level}</span>
+                    </Badge>
+                  </Link>
                 </div>
               </div>
 
@@ -209,41 +281,47 @@ export default function PerfilPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="bg-card/30 border-border">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-orange-500/10 flex items-center justify-center">
-                  <Flame className="h-6 w-6 text-orange-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Racha actual</p>
-                  <p className="text-2xl font-bold">{userProfile.streak} días</p>
-                </div>
-              </CardContent>
-            </Card>
+            <Link href="/perfil/retos" className="block">
+              <Card className="bg-card/30 border-border hover:border-primary transition-colors duration-200">
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                    <CheckCircle2 className="h-6 w-6 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Retos completados</p>
+                    <p className="text-2xl font-bold">{loadingStats ? "..." : userProfile.completedChallenges}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
 
-            <Card className="bg-card/30 border-border">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <Trophy className="h-6 w-6 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Nivel actual</p>
-                  <p className="text-2xl font-bold">{userProfile.level}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <Link href="/perfil/estadisticas" className="block">
+              <Card className="bg-card/30 border-border hover:border-primary transition-colors duration-200">
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-orange-500/10 flex items-center justify-center">
+                    <Flame className="h-6 w-6 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Racha actual</p>
+                    <p className="text-2xl font-bold">{loadingStats ? "..." : userProfile.streak} días</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
 
-            <Card className="bg-card/30 border-border">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <CheckCircle2 className="h-6 w-6 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Retos completados</p>
-                  <p className="text-2xl font-bold">{userProfile.completedChallenges}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <Link href="/perfil/nivel" className="block">
+              <Card className="bg-card/30 border-border hover:border-primary transition-colors duration-200">
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <Trophy className="h-6 w-6 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Nivel actual</p>
+                    <p className="text-2xl font-bold">{loadingStats ? "..." : userProfile.level}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -294,25 +372,40 @@ export default function PerfilPage() {
           </div>
 
           <div className="mb-8">
-            <h2 className="text-xl font-bold mb-4">Actividad reciente</h2>
-            {recentActivity.length > 0 ? (
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Actividad reciente</h2>
+              <Link href="/perfil/retos">
+                <Button variant="outline" size="sm">
+                  Ver todos
+                </Button>
+              </Link>
+            </div>
+            {loadingStats ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : userProfile.completedChallenges > 0 ? (
               <div className="space-y-3">
                 {recentActivity.map((activity, index) => (
-                  <Card key={index} className="bg-card/30">
-                    <CardContent className="p-4 flex items-center gap-3">
-                      <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Code className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium">{activity.title}</h3>
-                        <p className="text-sm text-muted-foreground">{activity.date}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <Link href={`/retos/${activity.id || "#"}`} key={index}>
+                    <Card key={index} className="bg-card/30 hover:border-primary transition-colors duration-200">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <Code className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{activity.title}</h3>
+                          <p className="text-sm text-muted-foreground">{activity.date}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
 
                 <div className="text-center mt-4">
-                  <Button variant="outline">Ver más actividad</Button>
+                  <Link href="/perfil/retos">
+                    <Button variant="outline">Ver más actividad</Button>
+                  </Link>
                 </div>
               </div>
             ) : (
