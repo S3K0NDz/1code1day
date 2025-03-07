@@ -39,6 +39,9 @@ type AuthContextType = {
   signInWithMagicLink: (email: string) => Promise<{
     error: Error | null
   }>
+  signInWithGitHub: () => Promise<{
+    error: Error | null
+  }>
   signOut: () => Promise<void>
 }
 
@@ -120,6 +123,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error }
   }
 
+  // Añadir función para iniciar sesión con GitHub
+  const signInWithGitHub = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: {
+        redirectTo:
+          process.env.NODE_ENV === "production"
+            ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+            : `${window.location.origin}/auth/callback`,
+      },
+    })
+    return { error }
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
     router.push("/login")
@@ -133,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signInWithMagicLink,
+    signInWithGitHub,
     signOut,
   }
 

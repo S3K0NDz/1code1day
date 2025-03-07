@@ -32,6 +32,11 @@ export default function NavbarWithUser() {
     router.push("/configuracion")
   }
 
+  // Obtener la imagen de avatar y nombre de usuario de los metadatos
+  const avatarUrl = user?.user_metadata?.avatar_url || "/placeholder-user.jpg"
+  const displayName =
+    user?.user_metadata?.full_name || user?.user_metadata?.username || user?.email?.split("@")[0] || "usuario"
+
   if (!mounted) return null
 
   return (
@@ -114,17 +119,15 @@ export default function NavbarWithUser() {
               <div className="relative group">
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder-user.jpg" alt={user.email || "@usuario"} />
-                    <AvatarFallback>{user.email?.substring(0, 2).toUpperCase() || "US"}</AvatarFallback>
+                    <AvatarImage src={avatarUrl} alt={displayName} />
+                    <AvatarFallback>{displayName.substring(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </Button>
 
                 <div className="absolute right-0 mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out z-50">
                   <div className="py-1 bg-popover border border-border rounded-md shadow-md">
                     <div className="px-4 py-2 border-b border-border">
-                      <p className="text-sm font-medium">
-                        {user.user_metadata?.username || user.email?.split("@")[0] || "usuario"}
-                      </p>
+                      <p className="text-sm font-medium">{displayName}</p>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
 

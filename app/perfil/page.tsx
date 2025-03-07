@@ -52,8 +52,14 @@ export default function PerfilPage() {
     return null
   }
 
-  const username = user.user_metadata?.username || user.email?.split("@")[0] || "usuario"
-  const fullName = `${user.user_metadata?.first_name || ""} ${user.user_metadata?.last_name || ""}`.trim() || username
+  // Obtener datos del perfil de los metadatos de usuario
+  const avatarUrl = user.user_metadata?.avatar_url || "/placeholder-user.jpg"
+  const username =
+    user.user_metadata?.user_name || user.user_metadata?.username || user.email?.split("@")[0] || "usuario"
+  const fullName =
+    user.user_metadata?.full_name ||
+    `${user.user_metadata?.first_name || ""} ${user.user_metadata?.last_name || ""}`.trim() ||
+    username
   const email = user.email || ""
   const createdAt = user.created_at ? new Date(user.created_at) : new Date()
   const memberSince = createdAt.toLocaleDateString("es-ES", { month: "long", year: "numeric" })
@@ -67,7 +73,7 @@ export default function PerfilPage() {
     completedChallenges: user.user_metadata?.completed_challenges || 0,
     streak: user.user_metadata?.streak || 7, // Añadir racha
     level: user.user_metadata?.level || 12, // Añadir nivel
-    github: user.user_metadata?.github || "",
+    github: user.user_metadata?.user_name || user.user_metadata?.github || "",
     twitter: user.user_metadata?.twitter || "",
     linkedin: user.user_metadata?.linkedin || "",
     bio: user.user_metadata?.bio || "Desarrollador apasionado por mejorar mis habilidades de programación día a día.",
@@ -120,7 +126,7 @@ export default function PerfilPage() {
             <div className="flex flex-col md:flex-row gap-6">
               <div className="flex flex-col items-center md:items-start">
                 <Avatar className="h-24 w-24 border-4 border-background mb-4">
-                  <AvatarImage src="/placeholder-user.jpg" alt={`@${userProfile.username}`} />
+                  <AvatarImage src={avatarUrl} alt={`@${userProfile.username}`} />
                   <AvatarFallback className="text-3xl">
                     {userProfile.username.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
