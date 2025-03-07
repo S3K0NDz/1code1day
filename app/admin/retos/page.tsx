@@ -1,9 +1,11 @@
 "use client"
 
+import { CardFooter } from "@/components/ui/card"
+
 import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -218,18 +220,24 @@ export default function AdminRetos() {
 
   const scheduleAsDaily = async (reto: Reto, date: Date) => {
     try {
+      // Asegurarse de que la fecha se guarda en formato ISO
+      const formattedDate = date.toISOString()
+
       const { error } = await supabase
         .from("retos")
         .update({
-          daily_date: date.toISOString(),
+          daily_date: formattedDate,
           updatedat: new Date().toISOString(),
         })
         .eq("id", reto.id)
+
       if (error) throw error
+
       toast({
         title: "Reto programado",
         description: `El reto "${reto.title}" ha sido programado como reto diario para el ${format(date, "dd/MM/yyyy")}`,
       })
+
       fetchRetos()
     } catch (error) {
       console.error("Error scheduling daily challenge:", error)
@@ -585,9 +593,12 @@ function RetoCard({
                 mode="single"
                 selected={selectedDate}
                 onSelect={(date) => {
-                  setSelectedDate(date)
                   if (date) {
-                    onScheduleDaily(reto, date)
+                    setSelectedDate(date)
+                    // Asegúrate de que la fecha tiene la hora establecida a medianoche
+                    const dateAtMidnight = new Date(date)
+                    dateAtMidnight.setHours(0, 0, 0, 0)
+                    onScheduleDaily(reto, dateAtMidnight)
                     setShowDatePicker(false)
                   }
                 }}

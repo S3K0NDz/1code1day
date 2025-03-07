@@ -66,15 +66,19 @@ export default function RetoDiarioPage() {
         // Formatear la fecha para la consulta
         const formattedDate = today.toISOString().split("T")[0]
 
+        console.log("Buscando reto para la fecha:", formattedDate)
+
         // Consultar el reto programado para hoy
         const { data, error } = await supabase
           .from("retos")
           .select("*")
           .eq("published", true)
-          .gte("daily_date", formattedDate)
-          .lt("daily_date", new Date(today.getTime() + 86400000).toISOString()) // Añadir un día
+          .filter("daily_date", "gte", formattedDate + "T00:00:00")
+          .filter("daily_date", "lt", formattedDate + "T23:59:59")
           .order("daily_date", { ascending: true })
           .limit(1)
+
+        console.log("Resultado de la consulta:", data)
 
         if (error) throw error
 
@@ -135,6 +139,7 @@ export default function RetoDiarioPage() {
           })
         } else {
           // Si no hay reto diario programado, mostrar un mensaje
+          console.log("No se encontró ningún reto para hoy")
           toast({
             title: "No hay reto diario",
             description: "No hay un reto programado para hoy. Intenta más tarde.",
@@ -199,46 +204,33 @@ export default function RetoDiarioPage() {
     setOutput("")
 
     try {
-      const originalConsoleLog = console.log
       let consoleOutput = ""
+      const originalConsoleLog = console.log
+
+      // Capturar la salida de console.log
       console.log = (...args) => {
         consoleOutput += args.join(" ") + "<br>"
         originalConsoleLog(...args)
       }
 
-      // Evaluar el código del usuario en un entorno seguro
-      const result = new Function(`
-        ${code}
-        // Ejecutar ejemplos si existen
-        try {
-          ${
-            dailyChallenge.examples && dailyChallenge.examples.length > 0
-              ? dailyChallenge.examples
-                  .map(
-                    (ex) =>
-                      `console.log("Ejemplo: Input:", ${JSON.stringify(ex.input)});
-                 // Buscar la función principal
-                 const functionNames = Object.keys(this).filter(key => 
-                   typeof this[key] === 'function' && !key.startsWith('_')
-                 );
-                 if (functionNames.length > 0) {
-                   const result = this[functionNames[0]](${JSON.stringify(ex.input)});
-                   console.log("Output:", result);
-                 }`,
-                  )
-                  .join("\n")
-              : "// No hay ejemplos disponibles"
-          }
-        } catch (e) {
-          console.log("Error al ejecutar ejemplos:", e.message);
-        }
-        return "Código ejecutado";
-      `)()
+      // Simplemente ejecutar el código del usuario sin verificar tests
+      try {
+        // Crear un entorno seguro para ejecutar el código
+        const userCode = code
 
-      setOutput(consoleOutput || result)
+        // Ejecutar el código directamente
+        eval(userCode)
+      } catch (e) {
+        throw new Error(`Error al ejecutar el código: ${e.message}`)
+      }
+
+      // Restaurar console.log original
       console.log = originalConsoleLog
+
+      // Mostrar la salida capturada
+      setOutput(consoleOutput || "sin salida")
     } catch (error) {
-      setOutput(`Error: ${error.message}`)
+      setOutput(`Error en la ejecución: ${error.message}`)
     } finally {
       setIsRunning(false)
     }
@@ -251,18 +243,35 @@ export default function RetoDiarioPage() {
     setOutput("")
 
     try {
-      // Crear una función segura para evaluar el código del usuario
-      const userFunction = new Function(`
-        ${code}
-        // Extraer todas las funciones definidas
-        const functions = {};
-        for (const key in this) {
-          if (typeof this[key] === 'function' && !key.startsWith('_')) {
-            functions[key] = this[key];
-          }
+      // Extraer el nombre de la función del código
+      const functionNameMatch = code.match(/function\s+([a-zA-Z0-9_]+)\s*\(/)
+      if (!functionNameMatch) {
+        throw new Error("No se encontró ninguna función en tu código. Asegúrate de definir una función.")
+      }
+
+      const functionName = functionNameMatch[1]
+
+      // Ejecutar el código del usuario asegurándose de que se defina en el ámbito global
+      try {
+        // Envolver el código en una IIFE que asigna explícitamente la función al objeto window
+        const wrappedCode = `
+          (function() {
+            ${code}
+            // Asignar explícitamente la función al objeto window
+            window["${functionName}"] = ${functionName};
+          })();
+        `
+
+        // Evaluar el código envuelto
+        eval(wrappedCode)
+
+        // Verificar si la función existe en el ámbito global
+        if (typeof window[functionName] !== "function") {
+          throw new Error(`La función ${functionName} no está definida correctamente.`)
         }
-        return functions;
-      `)()
+      } catch (e) {
+        throw new Error(`Error al ejecutar el código: ${e.message}`)
+      }
 
       let consoleOutput = ""
       const originalConsoleLog = console.log
@@ -272,6 +281,7 @@ export default function RetoDiarioPage() {
       }
 
       let allTestsPassed = true
+      let testOutput = ""
 
       if (!dailyChallenge.testCases || dailyChallenge.testCases.length === 0) {
         setOutput("No hay casos de prueba definidos para este reto.")
@@ -279,59 +289,86 @@ export default function RetoDiarioPage() {
         return
       }
 
-      // Intentar encontrar la función principal
-      const functionNames = Object.keys(userFunction)
-      if (functionNames.length === 0) {
-        throw new Error("No se encontró ninguna función en tu código.")
-      }
+      // Procesar casos de prueba
+      if (dailyChallenge.testCases && dailyChallenge.testCases.length > 0) {
+        for (let i = 0; i < dailyChallenge.testCases.length; i++) {
+          const test = dailyChallenge.testCases[i]
+          let result
+          let passed = false
+          let error = null
 
-      // Usar la primera función encontrada o buscar una que coincida con el patrón del reto
-      const mainFunctionName = functionNames[0]
-      const mainFunction = userFunction[mainFunctionName]
-
-      if (!mainFunction) {
-        throw new Error(`No se encontró la función ${mainFunctionName}.`)
-      }
-
-      dailyChallenge.testCases.forEach((test, index) => {
-        try {
-          // Preparar el input según su tipo
-          let input = test.input
-          if (typeof input === "string" && (input.startsWith("[") || input.startsWith("{"))) {
-            try {
-              input = JSON.parse(input)
-            } catch (e) {
-              // Si no se puede parsear, usar como string
+          try {
+            // Preparar el input según su tipo
+            let input = test.input
+            if (typeof input === "string" && (input.startsWith("[") || input.startsWith("{"))) {
+              try {
+                input = JSON.parse(input)
+              } catch (e) {
+                // Si no se puede parsear, usar como string
+              }
             }
+
+            // Ejecutar la función con el input
+            if (typeof input === "string" && input.includes(",")) {
+              const args = input.split(",").map((arg) => {
+                // Intentar convertir a número si es posible
+                const trimmed = arg.trim()
+                const num = Number(trimmed)
+                return isNaN(num) ? trimmed : num
+              })
+              result = window[functionName](...args)
+            } else {
+              result = window[functionName](input)
+            }
+
+            // Preparar el valor esperado
+            let expected = test.expected
+            if (typeof expected === "string" && (expected.startsWith("[") || expected.startsWith("{"))) {
+              try {
+                expected = JSON.parse(expected)
+              } catch (e) {
+                // Si no se puede parsear, usar como string
+              }
+            }
+
+            // Comparar resultado con el esperado
+            if (typeof result === "number" && typeof expected === "string") {
+              // Si el resultado es un número y el esperado es string, convertir para comparar
+              passed = result.toString() === expected
+            } else if (typeof expected === "number" && typeof result === "string") {
+              // Si el esperado es un número y el resultado es string, convertir para comparar
+              passed = expected.toString() === result
+            } else if (typeof expected === "number" && typeof result === "number") {
+              // Comparación directa de números
+              passed = result === expected
+            } else {
+              // Para otros tipos, usar la comparación de cadenas JSON
+              passed = JSON.stringify(result) === JSON.stringify(expected)
+            }
+          } catch (e) {
+            error = e.message
+            passed = false
           }
 
-          // Ejecutar la función con el input
-          const result = mainFunction(input)
+          testOutput += `━━\n`
+          testOutput += `▶ Test ${i + 1}: ${passed ? "✅ PASÓ" : "❌ FALLÓ"}\n`
+          testOutput += `━━\n\n`
+          testOutput += `📥 Entrada: ${test.input}\n\n`
+          testOutput += `🎯 Esperado: ${test.expected}\n\n`
+          testOutput += `🔍 Obtenido: ${result !== undefined ? result : "undefined"}\n\n`
 
-          // Preparar el valor esperado
-          let expected = test.expected
-          if (typeof expected === "string" && (expected.startsWith("[") || expected.startsWith("{"))) {
-            try {
-              expected = JSON.parse(expected)
-            } catch (e) {
-              // Si no se puede parsear, usar como string
-            }
+          if (error) {
+            testOutput += `⚠️ Error: ${error}\n\n`
           }
 
-          // Comparar resultado con el esperado
-          const passed = JSON.stringify(result) === JSON.stringify(expected)
-
-          consoleOutput += `Test ${index + 1}: Input: "${JSON.stringify(input)}" -> Output: "${JSON.stringify(result)}" (Expected: "${JSON.stringify(expected)}") - ${passed ? "✅ Passed" : "❌ Failed"}<br>`
+          testOutput += `\n\n`
 
           if (!passed) allTestsPassed = false
-        } catch (error) {
-          consoleOutput += `Test ${index + 1}: Error - ${error.message}<br>`
-          allTestsPassed = false
         }
-      })
+      }
 
       console.log = originalConsoleLog
-      setOutput(consoleOutput)
+      setOutput(consoleOutput + testOutput)
 
       if (allTestsPassed) {
         setSuccess(true)
@@ -737,8 +774,8 @@ export default function RetoDiarioPage() {
                     <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
                     ¡Reto completado!
                   </h3>
-                  <button onClick={() => setShowSuccessModal(false)} className="text-muted-foreground hover:text-white">
-                    <X className="h-5 w-5" />
+                  <button onClick={() => setShowSuccessModal(false)} className="text-gray-400 hover:text-gray-600">
+                    <X className="h-4 w-4 sm:h-5 sm:w-5" />
                   </button>
                 </div>
                 <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
