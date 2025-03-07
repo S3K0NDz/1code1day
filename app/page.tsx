@@ -117,7 +117,9 @@ export default function Home() {
                     </li>
                   </ul>
                 </div>
-                <Button className="w-full mt-auto">Suscribirse</Button>
+                <Link href="/checkout?plan=premium&billing=monthly" className="w-full">
+                  <Button className="w-full mt-auto">Suscribirse</Button>
+                </Link>
               </div>
             </div>
           </section>
