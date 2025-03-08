@@ -55,22 +55,7 @@ export default function RetoPage() {
   // Añadir estado para controlar si el reto es de acceso gratuito
   const [isFreeAccess, setIsFreeAccess] = useState(false)
 
-  // Verificar si el usuario está autenticado
   useEffect(() => {
-    if (!authLoading && !user) {
-      toast({
-        title: "Acceso restringido",
-        description: "Debes iniciar sesión para acceder a los retos.",
-        variant: "destructive",
-      })
-      router.replace("/login?redirect=/retos/" + id)
-    }
-  }, [user, authLoading, router, id])
-
-  useEffect(() => {
-    // Solo cargar el reto si el usuario está autenticado
-    if (authLoading || !user) return
-
     const fetchReto = async () => {
       setIsLoading(true)
       try {
@@ -159,16 +144,11 @@ export default function RetoPage() {
       }
     }
     fetchReto()
-  }, [id, user, authLoading, params.id])
+  }, [id, user])
 
   // Verificar si el usuario puede acceder al reto
   useEffect(() => {
-    // Esperar a que se carguen los datos necesarios
-    if (authLoading || isLoading || !user) return
-
-    // Si el usuario no es premium y el reto no es de acceso gratuito, redirigir a planes
-    if (!isPro && !isFreeAccess) {
-      console.log("Acceso denegado: Usuario no premium intentando acceder a contenido premium")
+    if (!authLoading && !isLoading && !isPro && !isFreeAccess) {
       toast({
         title: "Contenido Premium",
         description: "Este reto solo está disponible para usuarios Premium.",
@@ -178,10 +158,9 @@ export default function RetoPage() {
           </Button>
         ),
       })
-      // Usar replace en lugar de push para evitar que el usuario pueda volver atrás
-      router.replace("/planes")
+      router.push("/planes")
     }
-  }, [authLoading, isPro, isLoading, isFreeAccess, router, user])
+  }, [authLoading, isPro, isLoading, isFreeAccess, router])
 
   // Verificar si el reto está guardado
   useEffect(() => {
@@ -563,19 +542,8 @@ export default function RetoPage() {
     }
   }
 
-  // Si el usuario no está autenticado o está cargando, mostrar pantalla de carga
-  if (authLoading || (!authLoading && !user)) {
-    return (
-      <InteractiveGridBackground>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      </InteractiveGridBackground>
-    )
-  }
-
   // Mostrar un mensaje de carga mientras se verifica si el usuario es premium
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <InteractiveGridBackground>
         <div className="min-h-screen flex items-center justify-center">
@@ -586,13 +554,7 @@ export default function RetoPage() {
   }
 
   // Si el usuario no es premium y el reto no es de acceso gratuito, mostrar mensaje de contenido premium
-  // Esta condición debería ser redundante debido al useEffect, pero la mantenemos como seguridad adicional
-  if (!authLoading && !isLoading && !isPro && !isFreeAccess) {
-    // En lugar de mostrar contenido, redirigir inmediatamente
-    if (typeof window !== "undefined") {
-      router.replace("/planes")
-    }
-
+  if (!isPro && !isFreeAccess) {
     return (
       <InteractiveGridBackground>
         <div className="min-h-screen">
@@ -608,9 +570,11 @@ export default function RetoPage() {
               <h1 className="text-xl font-bold">Retos anteriores</h1>
             </div>
 
+            {/* Buscar donde se usa el componente PremiumContentLock y añadir la prop freeAccess */}
             <PremiumContentLock
+              freeAccess={reto?.free_access || false}
               title="Reto Premium"
-              description="Este reto solo está disponible para usuarios Premium. Actualizando tu plan podrás acceder a todos los retos y mejorar tus habilidades de programación."
+              description="Este reto solo está disponible para usuarios Premium. Actualiza tu plan para acceder a todos los retos y mejorar tus habilidades de programación."
             />
           </div>
         </div>
@@ -639,32 +603,32 @@ export default function RetoPage() {
       <div className="min-h-screen flex flex-col">
         <NavbarWithUser />
         <div className="container mx-auto px-4 py-4 flex-1 flex flex-col">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center">
               <Link href="/retos">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="mr-2">
                   <ArrowLeft className="h-4 w-4 mr-1" />
-                  <span className="sm:inline hidden">Volver</span>
+                  Volver
                 </Button>
               </Link>
-              <h1 className="text-lg sm:text-xl font-bold truncate max-w-[200px] sm:max-w-none">{reto.title}</h1>
-              <Badge variant="outline" className={getDifficultyColor(reto.difficulty)}>
+              <h1 className="text-xl font-bold">{reto.title}</h1>
+              <Badge variant="outline" className={`ml-3 ${getDifficultyColor(reto.difficulty)}`}>
                 {reto.difficulty}
               </Badge>
 
               {/* Indicador de Premium o Gratuito */}
               {!isPro &&
                 (isFreeAccess ? (
-                  <Badge className="bg-green-500/20 text-green-500 border-green-500/20">Gratuito</Badge>
+                  <Badge className="ml-2 bg-green-500/20 text-green-500 border-green-500/20">Gratuito</Badge>
                 ) : (
-                  <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1">
+                  <Badge className="ml-2 bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1">
                     <Lock className="h-3 w-3" />
                     Premium
                   </Badge>
                 ))}
             </div>
             <div className="flex items-center">
-              <div className="flex items-center bg-secondary px-3 py-1 rounded-md">
+              <div className="flex items-center mr-4 bg-secondary px-3 py-1 rounded-md">
                 <Clock className="h-4 w-4 mr-1.5 text-yellow-500" />
                 <span className="font-medium">{formatTime(remainingTime)}</span>
               </div>
@@ -679,11 +643,11 @@ export default function RetoPage() {
             </TabsList>
 
             <TabsContent value="editor" className="flex-1 flex flex-col">
-              <div className="flex flex-col lg:grid lg:grid-cols-5 gap-4 flex-1">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 flex-1">
                 <div className="lg:col-span-3 flex flex-col">
                   <div className="editor-wrapper flex-1 rounded-md overflow-hidden border border-border">
                     <Editor
-                      height="min(70vh, 400px)"
+                      height="100%"
                       defaultLanguage="javascript"
                       theme="vs-dark"
                       value={code}
@@ -706,50 +670,36 @@ export default function RetoPage() {
                       }}
                     />
                   </div>
-                  <div className="mt-4 flex flex-col sm:flex-row sm:justify-between gap-2">
+                  <div className="mt-4 flex justify-between">
+                    <Button variant="outline" size="sm" onClick={resetCode}>
+                      <RefreshCw className="h-4 w-4 mr-1.5" />
+                      Reiniciar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleToggleSave}
+                      className={isSaved ? "bg-primary/10" : ""}
+                    >
+                      {isSaved ? "Quitar de guardados" : "Guardar reto"}
+                    </Button>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={resetCode} className="flex-1 sm:flex-auto">
-                        <RefreshCw className="h-4 w-4 mr-1.5" />
-                        Reiniciar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleToggleSave}
-                        className={`flex-1 sm:flex-auto ${isSaved ? "bg-primary/10" : ""}`}
-                      >
-                        {isSaved ? "Quitar de guardados" : "Guardar reto"}
-                      </Button>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={runCode}
-                        disabled={isRunning}
-                        className="flex-1 sm:flex-auto"
-                      >
+                      <Button variant="outline" size="sm" onClick={runCode} disabled={isRunning}>
                         <Play className="h-4 w-4 mr-1.5" />
                         Ejecutar
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCheckCode}
-                        disabled={isRunning}
-                        className="flex-1 sm:flex-auto"
-                      >
+                      <Button variant="outline" size="sm" onClick={handleCheckCode} disabled={isRunning}>
                         <CheckCircle className="h-4 w-4 mr-1.5" />
                         Comprobar
                       </Button>
-                      <Button size="sm" onClick={handleSubmit} disabled={isRunning} className="flex-1 sm:flex-auto">
+                      <Button size="sm" onClick={handleSubmit} disabled={isRunning}>
                         <Save className="h-4 w-4 mr-1.5" />
                         Enviar
                       </Button>
                     </div>
                   </div>
                 </div>
-                <div className="lg:col-span-2 flex flex-col mt-4 lg:mt-0">
+                <div className="lg:col-span-2 flex flex-col">
                   <div className="flex-1 border border-border rounded-md overflow-hidden bg-card/70">
                     <div className="bg-muted px-4 py-2 text-sm font-medium border-b border-border">Consola</div>
                     <div className="h-full">
@@ -758,10 +708,7 @@ export default function RetoPage() {
                           <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent"></div>
                         </div>
                       ) : (
-                        <CodeOutput
-                          value={output || "Ejecuta tu código para ver los resultados"}
-                          height="min(40vh, 300px)"
-                        />
+                        <CodeOutput value={output || "Ejecuta tu código para ver los resultados"} height="400px" />
                       )}
                     </div>
                   </div>
@@ -827,8 +774,8 @@ export default function RetoPage() {
           </Tabs>
 
           {showSuccessModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70">
-              <div className="bg-black border border-border rounded-lg max-w-lg w-full max-h-[90vh] overflow-auto">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+              <div className="bg-black border border-border rounded-lg max-w-lg w-full overflow-hidden">
                 <div className="p-4 border-b border-border flex justify-between items-center">
                   <h3 className="text-xl font-bold flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-yellow-400" />
@@ -838,28 +785,28 @@ export default function RetoPage() {
                     <X className="h-5 w-5" />
                   </button>
                 </div>
-                <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <div className="p-6 space-y-6">
                   <div className="text-center">
-                    <div className="mb-4 text-base sm:text-lg">
+                    <div className="mb-4 text-lg">
                       ¡Felicidades, <span className="font-bold">{username}</span>!
                     </div>
-                    <p className="text-muted-foreground text-sm sm:text-base">
+                    <p className="text-muted-foreground">
                       Has completado exitosamente el reto <span className="font-bold">{reto.title}</span>.
                     </p>
                   </div>
                   <div className="relative border border-border rounded-lg overflow-hidden" id="share-card">
-                    <div className="p-4 sm:p-6 flex flex-col items-center justify-center min-h-[180px] sm:min-h-[200px]">
+                    <div className="p-6 flex flex-col items-center justify-center min-h-[200px]">
                       <div className="flex items-center gap-2 mb-2">
-                        <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-400" />
-                        <span className="text-base sm:text-lg font-semibold flex items-center gap-1">
+                        <Trophy className="h-8 w-8 text-yellow-400" />
+                        <span className="text-lg font-semibold flex items-center gap-1">
                           <span className="bg-white text-black px-2">1code</span>
                           <span className="text-white">1day</span>
                         </span>
                       </div>
                       <div className="text-center mb-4">
-                        <div className="text-lg sm:text-xl font-bold mb-1">{username}</div>
-                        <div className="text-muted-foreground text-sm">ha completado el reto</div>
-                        <div className="text-lg sm:text-xl font-bold mt-1 px-2">{reto.title}</div>
+                        <div className="text-xl font-bold mb-1">{username}</div>
+                        <div className="text-muted-foreground">ha completado el reto</div>
+                        <div className="text-xl font-bold mt-1">{reto.title}</div>
                       </div>
                       <div className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(reto.difficulty)}`}>
                         {reto.difficulty}
@@ -867,7 +814,7 @@ export default function RetoPage() {
                     </div>
                   </div>
                   <div className="text-center">
-                    <p className="text-muted-foreground mb-4 text-sm">¡Comparte tu logro con el mundo!</p>
+                    <p className="text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
                     <div className="flex justify-center gap-3">
                       <Button
                         variant="outline"
@@ -875,7 +822,7 @@ export default function RetoPage() {
                         onClick={() => handleShare("twitter")}
                         title="Compartir en Twitter"
                       >
-                        <Twitter className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <Twitter className="h-5 w-5" />
                       </Button>
                       <Button
                         variant="outline"
@@ -883,7 +830,7 @@ export default function RetoPage() {
                         onClick={() => handleShare("facebook")}
                         title="Compartir en Facebook"
                       >
-                        <Facebook className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <Facebook className="h-5 w-5" />
                       </Button>
                       <Button
                         variant="outline"
@@ -891,16 +838,16 @@ export default function RetoPage() {
                         onClick={() => handleShare("linkedin")}
                         title="Compartir en LinkedIn"
                       >
-                        <Linkedin className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <Linkedin className="h-5 w-5" />
                       </Button>
                       <Button variant="outline" size="icon" onClick={generateImage} title="Descargar imagen">
-                        <Download className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <Download className="h-5 w-5" />
                       </Button>
                     </div>
                   </div>
                 </div>
-                <div className="p-4 border-t border-border flex flex-col sm:flex-row gap-2 sm:justify-between">
-                  <Button variant="outline" onClick={() => setShowSuccessModal(false)} className="w-full sm:w-auto">
+                <div className="p-4 border-t border-border flex justify-between">
+                  <Button variant="outline" onClick={() => setShowSuccessModal(false)}>
                     Cerrar
                   </Button>
                   <Button
@@ -908,7 +855,6 @@ export default function RetoPage() {
                       setShowSuccessModal(false)
                       window.location.href = "/retos"
                     }}
-                    className="w-full sm:w-auto"
                   >
                     Siguiente reto
                   </Button>

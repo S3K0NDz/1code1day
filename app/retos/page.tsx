@@ -44,23 +44,8 @@ export default function RetosPage() {
   // Añadir un estado para filtrar por tipo de acceso (todos, gratuitos, premium)
   const [accessFilter, setAccessFilter] = useState("all")
 
-  // Verificar si el usuario está autenticado
-  useEffect(() => {
-    if (!authLoading && !user) {
-      toast({
-        title: "Acceso restringido",
-        description: "Debes iniciar sesión para acceder a los retos.",
-        variant: "destructive",
-      })
-      router.replace("/login?redirect=/retos")
-    }
-  }, [user, authLoading, router])
-
   // Cargar retos desde Supabase
   useEffect(() => {
-    // Solo cargar retos si el usuario está autenticado
-    if (authLoading || !user) return
-
     async function fetchRetos() {
       setIsLoading(true)
       try {
@@ -141,7 +126,7 @@ export default function RetosPage() {
     }
 
     fetchRetos()
-  }, [user, authLoading])
+  }, [])
 
   // Filtrar retos
   const filteredRetos = retos.filter((reto) => {
@@ -197,17 +182,6 @@ export default function RetosPage() {
       default:
         return "bg-blue-500/20 text-blue-500"
     }
-  }
-
-  // Si el usuario no está autenticado, mostrar pantalla de carga mientras se redirige
-  if (authLoading || (!authLoading && !user)) {
-    return (
-      <InteractiveGridBackground>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      </InteractiveGridBackground>
-    )
   }
 
   // Modificar para mostrar retos gratuitos y premium
@@ -346,10 +320,10 @@ export default function RetosPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredRetos.map((reto) => (
                 <Link
-                  href={isPro || reto.free_access ? `/retos/${reto.id}` : "/planes"}
+                  href={isPro || reto.isFreeAccess ? `/retos/${reto.id}` : "/planes"}
                   key={reto.id}
                   onClick={(e) => {
-                    if (!isPro && !reto.free_access) {
+                    if (!isPro && !reto.isFreeAccess) {
                       e.preventDefault()
                       toast({
                         title: "Contenido Premium",
@@ -360,20 +334,17 @@ export default function RetosPage() {
                           </Button>
                         ),
                       })
-                      // Redirigir inmediatamente a la página de planes
-                      router.push("/planes")
-                      return false
                     }
                   }}
                 >
                   <div
                     className={`border ${
-                      isPro || reto.free_access ? "border-border" : "border-primary/30"
+                      isPro || reto.isFreeAccess ? "border-border" : "border-primary/30"
                     } bg-card/50 rounded-lg p-6 hover:border-primary transition-colors duration-300 h-full flex flex-col relative`}
                   >
                     {/* Indicador de Premium o Gratuito */}
                     <div className="absolute top-3 right-3">
-                      {reto.free_access ? (
+                      {reto.isFreeAccess ? (
                         <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
                           Gratuito
                         </Badge>
@@ -407,7 +378,7 @@ export default function RetosPage() {
                     </div>
 
                     {/* Overlay para retos premium si el usuario no es premium */}
-                    {!isPro && !reto.free_access && (
+                    {!isPro && !reto.isFreeAccess && (
                       <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                         <div className="text-center p-4">
                           <Lock className="h-8 w-8 mx-auto mb-2 text-yellow-500" />

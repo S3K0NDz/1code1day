@@ -3,13 +3,17 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 // Rutas que requieren autenticación (todas excepto las especificadas)
-const publicRoutes = ["/login", "/registro", "/recuperar-password", "/actualizar-password", "/auth/callback"]
+const publicRoutes = [
+  "/login",
+  "/registro",
+  "/recuperar-password",
+  "/actualizar-password",
+  "/reto-diario",
+  "/auth/callback",
+]
 
 // Rutas que solo son accesibles si NO estás autenticado
 const authRoutes = ["/login", "/registro", "/recuperar-password", "/actualizar-password"]
-
-// Rutas que requieren autenticación explícitamente
-const protectedRoutes = ["/retos", "/retos/", "/reto-diario", "/perfil", "/admin"]
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
@@ -26,15 +30,11 @@ export async function middleware(req: NextRequest) {
   const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route))
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
 
-  // Verificar si la ruta está explícitamente protegida
-  const isProtectedRoute = protectedRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
-
   // Redirigir a login si la ruta requiere autenticación y no hay sesión
-  if (isProtectedRoute && !session) {
-    url.pathname = "/login"
-    url.searchParams.set("redirect", pathname)
-    return NextResponse.redirect(url)
-  }
+  //if (!isPublicRoute && !session) {
+  //  url.pathname = "/login"
+  //   return NextResponse.redirect(url)
+  // }
 
   // Redirigir a la página principal si el usuario ya está autenticado e intenta acceder a rutas de auth
   if (isAuthRoute && session) {
