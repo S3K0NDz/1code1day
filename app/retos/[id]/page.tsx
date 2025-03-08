@@ -603,32 +603,32 @@ export default function RetoPage() {
       <div className="min-h-screen flex flex-col">
         <NavbarWithUser />
         <div className="container mx-auto px-4 py-4 flex-1 flex flex-col">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-4">
+            <div className="flex items-center flex-wrap gap-2">
               <Link href="/retos">
                 <Button variant="ghost" size="sm" className="mr-2">
                   <ArrowLeft className="h-4 w-4 mr-1" />
-                  Volver
+                  <span className="hidden sm:inline">Volver</span>
                 </Button>
               </Link>
-              <h1 className="text-xl font-bold">{reto.title}</h1>
-              <Badge variant="outline" className={`ml-3 ${getDifficultyColor(reto.difficulty)}`}>
+              <h1 className="text-lg sm:text-xl font-bold">{reto.title}</h1>
+              <Badge variant="outline" className={`${getDifficultyColor(reto.difficulty)}`}>
                 {reto.difficulty}
               </Badge>
 
               {/* Indicador de Premium o Gratuito */}
               {!isPro &&
                 (isFreeAccess ? (
-                  <Badge className="ml-2 bg-green-500/20 text-green-500 border-green-500/20">Gratuito</Badge>
+                  <Badge className="bg-green-500/20 text-green-500 border-green-500/20">Gratuito</Badge>
                 ) : (
-                  <Badge className="ml-2 bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1">
+                  <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1">
                     <Lock className="h-3 w-3" />
                     Premium
                   </Badge>
                 ))}
             </div>
-            <div className="flex items-center">
-              <div className="flex items-center mr-4 bg-secondary px-3 py-1 rounded-md">
+            <div className="flex items-center self-end sm:self-auto">
+              <div className="flex items-center bg-secondary px-3 py-1 rounded-md">
                 <Clock className="h-4 w-4 mr-1.5 text-yellow-500" />
                 <span className="font-medium">{formatTime(remainingTime)}</span>
               </div>
@@ -636,7 +636,7 @@ export default function RetoPage() {
           </div>
 
           <Tabs defaultValue="editor" className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsList className="grid w-full grid-cols-3 mb-4 text-xs sm:text-sm">
               <TabsTrigger value="editor">Editor</TabsTrigger>
               <TabsTrigger value="descripcion">Descripción</TabsTrigger>
               <TabsTrigger value="pistas">Pistas</TabsTrigger>
@@ -670,8 +670,8 @@ export default function RetoPage() {
                       }}
                     />
                   </div>
-                  <div className="mt-4 flex justify-between">
-                    <Button variant="outline" size="sm" onClick={resetCode}>
+                  <div className="mt-4 flex flex-col sm:flex-row sm:justify-between gap-2">
+                    <Button variant="outline" size="sm" onClick={resetCode} className="w-full sm:w-auto">
                       <RefreshCw className="h-4 w-4 mr-1.5" />
                       Reiniciar
                     </Button>
@@ -679,20 +679,32 @@ export default function RetoPage() {
                       variant="outline"
                       size="sm"
                       onClick={handleToggleSave}
-                      className={isSaved ? "bg-primary/10" : ""}
+                      className={`w-full sm:w-auto ${isSaved ? "bg-primary/10" : ""}`}
                     >
                       {isSaved ? "Quitar de guardados" : "Guardar reto"}
                     </Button>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={runCode} disabled={isRunning}>
+                    <div className="flex gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={runCode}
+                        disabled={isRunning}
+                        className="flex-1 sm:flex-none"
+                      >
                         <Play className="h-4 w-4 mr-1.5" />
                         Ejecutar
                       </Button>
-                      <Button variant="outline" size="sm" onClick={handleCheckCode} disabled={isRunning}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCheckCode}
+                        disabled={isRunning}
+                        className="flex-1 sm:flex-none"
+                      >
                         <CheckCircle className="h-4 w-4 mr-1.5" />
                         Comprobar
                       </Button>
-                      <Button size="sm" onClick={handleSubmit} disabled={isRunning}>
+                      <Button size="sm" onClick={handleSubmit} disabled={isRunning} className="flex-1 sm:flex-none">
                         <Save className="h-4 w-4 mr-1.5" />
                         Enviar
                       </Button>
@@ -777,36 +789,36 @@ export default function RetoPage() {
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
               <div className="bg-black border border-border rounded-lg max-w-lg w-full overflow-hidden">
                 <div className="p-4 border-b border-border flex justify-between items-center">
-                  <h3 className="text-xl font-bold flex items-center gap-2">
-                    <Trophy className="h-5 w-5 text-yellow-400" />
+                  <h3 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
                     ¡Reto completado!
                   </h3>
                   <button onClick={() => setShowSuccessModal(false)} className="text-muted-foreground hover:text-white">
-                    <X className="h-5 w-5" />
+                    <X className="h-4 w-4 sm:h-5 sm:w-5" />
                   </button>
                 </div>
-                <div className="p-6 space-y-6">
+                <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                   <div className="text-center">
-                    <div className="mb-4 text-lg">
+                    <div className="mb-4 text-base sm:text-lg">
                       ¡Felicidades, <span className="font-bold">{username}</span>!
                     </div>
-                    <p className="text-muted-foreground">
+                    <p className="text-sm sm:text-base text-muted-foreground">
                       Has completado exitosamente el reto <span className="font-bold">{reto.title}</span>.
                     </p>
                   </div>
                   <div className="relative border border-border rounded-lg overflow-hidden" id="share-card">
-                    <div className="p-6 flex flex-col items-center justify-center min-h-[200px]">
+                    <div className="p-4 sm:p-6 flex flex-col items-center justify-center min-h-[180px] sm:min-h-[200px]">
                       <div className="flex items-center gap-2 mb-2">
-                        <Trophy className="h-8 w-8 text-yellow-400" />
-                        <span className="text-lg font-semibold flex items-center gap-1">
+                        <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-400" />
+                        <span className="text-base sm:text-lg font-semibold flex items-center gap-1">
                           <span className="bg-white text-black px-2">1code</span>
                           <span className="text-white">1day</span>
                         </span>
                       </div>
                       <div className="text-center mb-4">
-                        <div className="text-xl font-bold mb-1">{username}</div>
-                        <div className="text-muted-foreground">ha completado el reto</div>
-                        <div className="text-xl font-bold mt-1">{reto.title}</div>
+                        <div className="text-lg sm:text-xl font-bold mb-1">{username}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">ha completado el reto</div>
+                        <div className="text-lg sm:text-xl font-bold mt-1">{reto.title}</div>
                       </div>
                       <div className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(reto.difficulty)}`}>
                         {reto.difficulty}
@@ -814,7 +826,7 @@ export default function RetoPage() {
                     </div>
                   </div>
                   <div className="text-center">
-                    <p className="text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
                     <div className="flex justify-center gap-3">
                       <Button
                         variant="outline"
@@ -822,7 +834,7 @@ export default function RetoPage() {
                         onClick={() => handleShare("twitter")}
                         title="Compartir en Twitter"
                       >
-                        <Twitter className="h-5 w-5" />
+                        <Twitter className="h-4 w-4 sm:h-5 sm:w-5" />
                       </Button>
                       <Button
                         variant="outline"
@@ -830,7 +842,7 @@ export default function RetoPage() {
                         onClick={() => handleShare("facebook")}
                         title="Compartir en Facebook"
                       >
-                        <Facebook className="h-5 w-5" />
+                        <Facebook className="h-4 w-4 sm:h-5 sm:w-5" />
                       </Button>
                       <Button
                         variant="outline"
@@ -838,16 +850,16 @@ export default function RetoPage() {
                         onClick={() => handleShare("linkedin")}
                         title="Compartir en LinkedIn"
                       >
-                        <Linkedin className="h-5 w-5" />
+                        <Linkedin className="h-4 w-4 sm:h-5 sm:w-5" />
                       </Button>
                       <Button variant="outline" size="icon" onClick={generateImage} title="Descargar imagen">
-                        <Download className="h-5 w-5" />
+                        <Download className="h-4 w-4 sm:h-5 sm:w-5" />
                       </Button>
                     </div>
                   </div>
                 </div>
-                <div className="p-4 border-t border-border flex justify-between">
-                  <Button variant="outline" onClick={() => setShowSuccessModal(false)}>
+                <div className="p-4 border-t border-border flex flex-col sm:flex-row gap-2 sm:gap-0 sm:justify-between">
+                  <Button variant="outline" onClick={() => setShowSuccessModal(false)} className="w-full sm:w-auto">
                     Cerrar
                   </Button>
                   <Button
@@ -855,6 +867,7 @@ export default function RetoPage() {
                       setShowSuccessModal(false)
                       window.location.href = "/retos"
                     }}
+                    className="w-full sm:w-auto"
                   >
                     Siguiente reto
                   </Button>

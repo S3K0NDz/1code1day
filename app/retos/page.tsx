@@ -86,10 +86,10 @@ export default function RetosPage() {
             console.error("Error parsing testCases:", e)
           }
 
-          // Determinar si el reto es de acceso gratuito
-          // Por ahora, usaremos una lógica simple: los primeros 3 retos son gratuitos
-          // En producción, esto vendría de un campo en la base de datos
-          const isFreeAccess = reto.free_access === true || data.indexOf(reto) < 3
+          // Determinar si el reto es de acceso gratuito basado en el campo free_access
+          // Si free_access es explícitamente false, es premium
+          // Si free_access es true o usamos la lógica de fallback (primeros 3 retos), es gratuito
+          const isFreeAccess = reto.free_access !== false && (reto.free_access === true || data.indexOf(reto) < 3)
 
           return {
             id: reto.id,
@@ -336,14 +336,17 @@ export default function RetosPage() {
                       })
                     }
                   }}
+                  className="group"
                 >
                   <div
                     className={`border ${
-                      isPro || reto.isFreeAccess ? "border-border" : "border-primary/30"
-                    } bg-card/50 rounded-lg p-6 hover:border-primary transition-colors duration-300 h-full flex flex-col relative`}
+                      isPro || reto.isFreeAccess ? "border-border" : "border-yellow-500/30"
+                    } bg-card/50 rounded-lg p-6 group-hover:border-primary transition-all duration-300 h-full flex flex-col relative ${
+                      !isPro && !reto.isFreeAccess ? "group-hover:shadow-[0_0_15px_rgba(234,179,8,0.15)]" : ""
+                    }`}
                   >
                     {/* Indicador de Premium o Gratuito */}
-                    <div className="absolute top-3 right-3">
+                    <div className="absolute top-3 right-3 z-10">
                       {reto.isFreeAccess ? (
                         <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
                           Gratuito
@@ -351,7 +354,7 @@ export default function RetosPage() {
                       ) : (
                         <Badge
                           variant="outline"
-                          className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1"
+                          className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1 transition-all duration-300 group-hover:bg-yellow-500/30"
                         >
                           <Lock className="h-3 w-3" />
                           Premium
@@ -362,27 +365,27 @@ export default function RetosPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <CalendarCheck className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">{reto.date}</span>
-                      <Badge className={`${getDifficultyColor(reto.difficulty)} ml-auto`}>{reto.difficulty}</Badge>
                     </div>
                     <h2 className="text-xl font-bold mb-2">{reto.title}</h2>
-                    <p className="text-muted-foreground mb-4 flex-grow">{reto.description}</p>
+                    <p className="text-muted-foreground mb-4 flex-grow line-clamp-3">{reto.description}</p>
                     <div className="grid grid-cols-2 gap-4 mt-auto pt-4 border-t border-border">
                       <div className="flex flex-col">
                         <span className="text-sm text-muted-foreground">Categoría</span>
                         <span className="font-medium">{reto.category}</span>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm text-muted-foreground">Éxito</span>
-                        <span className="font-medium">{reto.successRate}%</span>
+                      <div className="flex flex-col items-end">
+                  
+                        <Badge className={getDifficultyColor(reto.difficulty)}>{reto.difficulty}</Badge>
                       </div>
                     </div>
 
                     {/* Overlay para retos premium si el usuario no es premium */}
                     {!isPro && !reto.isFreeAccess && (
-                      <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                        <div className="text-center p-4">
-                          <Lock className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
-                          <p className="text-white font-medium mb-2">Contenido Premium</p>
+                      <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+                        <div className="text-center p-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                          <Lock className="h-8 w-8 mx-auto mb-3 text-yellow-500" />
+                          <p className="text-white font-medium mb-2">Reto Premium</p>
+                          <p className="text-white/80 text-sm mb-4">Actualiza tu plan para acceder a este reto</p>
                           <Button
                             size="sm"
                             variant="outline"
