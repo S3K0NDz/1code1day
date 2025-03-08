@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import Editor from "@monaco-editor/react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -31,6 +31,7 @@ import { toast } from "@/components/ui/use-toast"
 import { supabase } from "@/utils/supabaseClient"
 import { useAuth } from "@/components/auth-provider"
 import { saveCompletedChallenge, toggleSavedChallenge } from "@/lib/db-functions"
+import PremiumContentLock from "@/components/premium-content-lock"
 
 export default function RetoPage() {
   const params = useParams()
@@ -48,13 +49,21 @@ export default function RetoPage() {
   const [username, setUsername] = useState("usuario")
   const [testResults, setTestResults] = useState<any[]>([])
   const [isSaved, setIsSaved] = useState(false)
-  const { user } = useAuth()
+  const { user, isPro, isLoading: authLoading } = useAuth()
+  const router = useRouter()
+  // Añadir estado para controlar si el reto es de acceso gratuito
+  const [isFreeAccess, setIsFreeAccess] = useState(false)
 
   useEffect(() => {
     const fetchReto = async () => {
       setIsLoading(true)
       try {
-        const { data, error } = await supabase.from("retos").select("*").eq("id", id).single()
+        // Buscar donde se obtiene el reto y añadir el campo free_access
+        const { data, error } = await supabase
+          .from("retos")
+          .select("*, user_challenges(*)")
+          .eq("id", params.id)
+          .single()
 
         if (error) throw error
 
@@ -84,6 +93,12 @@ export default function RetoPage() {
             testCases = []
           }
 
+          // Determinar si el reto es de acceso gratuito
+          // En producción, esto vendría de un campo en la base de datos
+          // Por ahora, usaremos una lógica simple basada en el ID
+          const freeAccess = data.free_access === true || Number.parseInt(data.id) % 5 === 0
+          setIsFreeAccess(freeAccess)
+
           setReto({
             id: data.id,
             title: data.title,
@@ -95,6 +110,7 @@ export default function RetoPage() {
             examples,
             hints,
             testCases,
+            isFreeAccess: freeAccess,
           })
           setCode(data.initialcode)
           setRemainingTime((data.timelimit || 45) * 60)
@@ -128,6 +144,22 @@ export default function RetoPage() {
     }
     fetchReto()
   }, [id, user])
+
+  // Verificar si el usuario puede acceder al reto
+  useEffect(() => {
+    if (!authLoading && !isLoading && !isPro && !isFreeAccess) {
+      toast({
+        title: "Contenido Premium",
+        description: "Este reto solo está disponible para usuarios Premium.",
+        action: (
+          <Button variant="default" size="sm" onClick={() => router.push("/planes")}>
+            Ver planes
+          </Button>
+        ),
+      })
+      router.push("/planes")
+    }
+  }, [authLoading, isPro, isLoading, isFreeAccess, router])
 
   // Verificar si el reto está guardado
   useEffect(() => {
@@ -509,11 +541,41 @@ export default function RetoPage() {
     }
   }
 
-  if (isLoading) {
+  // Mostrar un mensaje de carga mientras se verifica si el usuario es premium
+  if (authLoading || isLoading) {
     return (
       <InteractiveGridBackground>
         <div className="min-h-screen flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </InteractiveGridBackground>
+    )
+  }
+
+  // Si el usuario no es premium y el reto no es de acceso gratuito, mostrar mensaje de contenido premium
+  if (!isPro && !isFreeAccess) {
+    return (
+      <InteractiveGridBackground>
+        <div className="min-h-screen">
+          <NavbarWithUser />
+          <div className="container mx-auto px-4 py-8 flex-1 flex flex-col">
+            <div className="flex items-center mb-6">
+              <Link href="/retos">
+                <Button variant="ghost" size="sm" className="mr-2">
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Volver
+                </Button>
+              </Link>
+              <h1 className="text-xl font-bold">Retos anteriores</h1>
+            </div>
+
+            {/* Buscar donde se usa el componente PremiumContentLock y añadir la prop freeAccess */}
+            <PremiumContentLock
+              freeAccess={reto?.free_access || false}
+              title="Reto Premium"
+              description="Este reto solo está disponible para usuarios Premium. Actualiza tu plan para acceder a todos los retos y mejorar tus habilidades de programación."
+            />
+          </div>
         </div>
       </InteractiveGridBackground>
     )
@@ -552,6 +614,11 @@ export default function RetoPage() {
               <Badge variant="outline" className={`ml-3 ${getDifficultyColor(reto.difficulty)}`}>
                 {reto.difficulty}
               </Badge>
+
+              {/* Indicador de reto gratuito */}
+              {!isPro && isFreeAccess && (
+                <Badge className="ml-2 bg-green-500/20 text-green-500 border-green-500/20">Gratuito</Badge>
+              )}
             </div>
             <div className="flex items-center">
               <div className="flex items-center mr-4 bg-secondary px-3 py-1 rounded-md">
@@ -648,6 +715,11 @@ export default function RetoPage() {
                 <div className="flex flex-wrap gap-2 mb-4">
                   <Badge className={getDifficultyColor(reto.difficulty)}>{reto.difficulty}</Badge>
                   <Badge variant="outline">{reto.category}</Badge>
+
+                  {/* Indicador de reto gratuito */}
+                  {!isPro && isFreeAccess && (
+                    <Badge className="bg-green-500/20 text-green-500 border-green-500/20">Reto Gratuito</Badge>
+                  )}
                 </div>
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold mb-2">Descripción</h3>
@@ -773,6 +845,33 @@ export default function RetoPage() {
                   >
                     Siguiente reto
                   </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mostrar banner promocional para usuarios no premium en retos gratuitos */}
+          {!isPro && isFreeAccess && (
+            <div className="mt-6 p-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="bg-yellow-500/20 p-2 rounded-full">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1">¿Te gusta este reto?</h3>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Este es uno de nuestros retos gratuitos. Actualiza a Premium para acceder a todos los retos
+                    anteriores y desbloquear todas las funcionalidades.
+                  </p>
+                  <Link href="/planes">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/30"
+                    >
+                      Ver planes Premium
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </div>

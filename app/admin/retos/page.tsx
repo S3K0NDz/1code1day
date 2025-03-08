@@ -29,7 +29,7 @@ import { supabase } from "@/utils/supabaseClient"
 import { useToast } from "@/components/ui/use-toast"
 import GenerarRetoIA from "@/components/generar-reto-ia"
 
-// Definir la interfaz para los retos
+// Actualizar la interfaz Reto para incluir el campo free_access
 interface Reto {
   id: string
   title: string
@@ -45,6 +45,7 @@ interface Reto {
   createdat?: string
   updatedat?: string
   daily_date?: string
+  free_access?: boolean
 }
 
 export default function AdminRetos() {
@@ -53,6 +54,7 @@ export default function AdminRetos() {
   const [openDialog, setOpenDialog] = useState(false)
   const [editingReto, setEditingReto] = useState<Reto | null>(null)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+  // Actualizar el estado formData para incluir free_access
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -64,6 +66,7 @@ export default function AdminRetos() {
     testcases: [],
     published: false,
     daily_date: null as Date | null,
+    free_access: false,
   })
   const { toast } = useToast()
 
@@ -114,8 +117,14 @@ export default function AdminRetos() {
     setFormData((prev) => ({ ...prev, published: e.target.checked }))
   }
 
+  // Añadir el manejador para el cambio de free_access
+  const handleFreeAccessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, free_access: e.target.checked }))
+  }
+
   const openEditDialog = (reto: Reto) => {
     setEditingReto(reto)
+    // En la función openEditDialog, añadir free_access
     setFormData({
       title: reto.title,
       description: reto.description,
@@ -127,12 +136,14 @@ export default function AdminRetos() {
       testcases: reto.testcases,
       published: reto.published,
       daily_date: reto.daily_date ? new Date(reto.daily_date) : null,
+      free_access: reto.free_access || false,
     })
     setOpenDialog(true)
   }
 
   const openCreateDialog = () => {
     setEditingReto(null)
+    // En la función openCreateDialog, añadir free_access
     setFormData({
       title: "",
       description: "",
@@ -144,6 +155,7 @@ export default function AdminRetos() {
       testcases: [],
       published: false,
       daily_date: null,
+      free_access: false,
     })
     setOpenDialog(true)
   }
@@ -245,6 +257,7 @@ export default function AdminRetos() {
     }
   }
 
+  // En la función applyGeneratedReto, añadir free_access
   const applyGeneratedReto = (generatedReto: any) => {
     setFormData({
       title: generatedReto.title || "",
@@ -257,6 +270,7 @@ export default function AdminRetos() {
       testcases: generatedReto.testCases || [],
       published: false,
       daily_date: null,
+      free_access: false,
     })
   }
 
@@ -374,6 +388,17 @@ export default function AdminRetos() {
                       className="h-4 w-4"
                     />
                     <Label htmlFor="published">Publicado</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id="free_access"
+                      checked={formData.free_access}
+                      onChange={handleFreeAccessChange}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="free_access">Acceso gratuito (prueba premium)</Label>
                   </div>
                 </div>
 
@@ -568,6 +593,11 @@ function RetoCard({
             {reto.daily_date && (
               <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
                 Reto diario: {format(new Date(reto.daily_date), "dd/MM/yyyy")}
+              </Badge>
+            )}
+            {reto.free_access && (
+              <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                Acceso gratuito
               </Badge>
             )}
           </div>

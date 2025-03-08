@@ -4,13 +4,15 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CalendarCheck, Filter, Search, Trophy, ArrowRight, Calendar } from "lucide-react"
+import { CalendarCheck, Filter, Search, Trophy, ArrowRight, Calendar, Lock } from "lucide-react"
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
 import { toast } from "@/components/ui/use-toast"
+import { useAuth } from "@/hooks/use-auth"
+import { useRouter } from "next/navigation"
 
 // Categorías para filtrar
 const CATEGORIES = [
@@ -37,6 +39,10 @@ export default function RetosPage() {
   const [selectedDifficulty, setSelectedDifficulty] = useState("all")
   const [retos, setRetos] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const { user, isPro, isLoading: authLoading } = useAuth()
+  const router = useRouter()
+  // Añadir un estado para filtrar por tipo de acceso (todos, gratuitos, premium)
+  const [accessFilter, setAccessFilter] = useState("all")
 
   // Cargar retos desde Supabase
   useEffect(() => {
@@ -80,6 +86,11 @@ export default function RetosPage() {
             console.error("Error parsing testCases:", e)
           }
 
+          // Determinar si el reto es de acceso gratuito
+          // Por ahora, usaremos una lógica simple: los primeros 3 retos son gratuitos
+          // En producción, esto vendría de un campo en la base de datos
+          const isFreeAccess = reto.free_access === true || data.indexOf(reto) < 3
+
           return {
             id: reto.id,
             title: reto.title,
@@ -91,11 +102,13 @@ export default function RetosPage() {
               month: "long",
               year: "numeric",
             }),
-            completions: reto.completions || Math.floor(Math.random() * 1000), // Usar datos reales si existen
-            successRate: reto.success_rate || Math.floor(Math.random() * 30) + 70, // Usar datos reales si existen
+            completions: reto.completions || Math.floor(Math.random() * 1000),
+            successRate: reto.success_rate || Math.floor(Math.random() * 30) + 70,
             examples: examples,
             hints: hints,
             testCases: testCases,
+            isFreeAccess: isFreeAccess, // Añadir esta propiedad
+            free_access: reto.free_access,
           }
         })
 
@@ -149,7 +162,13 @@ export default function RetosPage() {
       (selectedDifficulty === "medium" && reto.difficulty === "Intermedio") ||
       (selectedDifficulty === "hard" && reto.difficulty === "Difícil")
 
-    return matchesSearch && matchesCategory && matchesDifficulty
+    // Filtrar por tipo de acceso
+    const matchesAccess =
+      accessFilter === "all" ||
+      (accessFilter === "free" && reto.isFreeAccess) ||
+      (accessFilter === "premium" && !reto.isFreeAccess)
+
+    return matchesSearch && matchesCategory && matchesDifficulty && matchesAccess
   })
 
   const getDifficultyColor = (difficulty) => {
@@ -165,6 +184,7 @@ export default function RetosPage() {
     }
   }
 
+  // Modificar para mostrar retos gratuitos y premium
   return (
     <InteractiveGridBackground>
       <div className="min-h-screen flex flex-col">
@@ -215,6 +235,31 @@ export default function RetosPage() {
             </Button>
           </div>
 
+          {/* Mensaje informativo para usuarios no premium */}
+          {!authLoading && !isPro && (
+            <div className="mb-8 p-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="bg-yellow-500/20 p-2 rounded-full">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1">Prueba nuestros retos gratuitos</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Algunos retos anteriores están disponibles gratuitamente para que puedas probar la experiencia
+                    premium. Actualiza tu plan para acceder a todos los retos y mejorar tus habilidades de programación.
+                  </p>
+                  <div className="mt-2">
+                    <Link href="/planes">
+                      <Button variant="outline" size="sm">
+                        Ver planes Premium
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Filtros y búsqueda */}
           <div className="mb-8 flex flex-col md:flex-row gap-4">
             <div className="relative flex-grow">
@@ -226,7 +271,7 @@ export default function RetosPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button variant="outline" className="flex items-center gap-2">
                 <Filter className="h-4 w-4" />
                 Filtrar
@@ -253,6 +298,16 @@ export default function RetosPage() {
                   </option>
                 ))}
               </select>
+              {/* Añadir filtro por tipo de acceso */}
+              <select
+                className="bg-background border border-input rounded-md px-3 py-2 text-sm"
+                value={accessFilter}
+                onChange={(e) => setAccessFilter(e.target.value)}
+              >
+                <option value="all">Todos los retos</option>
+                <option value="free">Retos gratuitos</option>
+                <option value="premium">Retos premium</option>
+              </select>
             </div>
           </div>
 
@@ -264,8 +319,40 @@ export default function RetosPage() {
           ) : filteredRetos.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredRetos.map((reto) => (
-                <Link href={`/retos/${reto.id}`} key={reto.id}>
-                  <div className="border border-border bg-card/50 rounded-lg p-6 hover:border-primary transition-colors duration-300 h-full flex flex-col">
+                <Link
+                  href={isPro || reto.isFreeAccess ? `/retos/${reto.id}` : "/planes"}
+                  key={reto.id}
+                  onClick={(e) => {
+                    if (!isPro && !reto.isFreeAccess) {
+                      e.preventDefault()
+                      toast({
+                        title: "Contenido Premium",
+                        description: "Este reto solo está disponible para usuarios Premium.",
+                        action: (
+                          <Button variant="default" size="sm" onClick={() => router.push("/planes")}>
+                            Ver planes
+                          </Button>
+                        ),
+                      })
+                    }
+                  }}
+                >
+                  <div
+                    className={`border ${isPro || reto.isFreeAccess ? "border-border" : "border-primary/30"} bg-card/50 rounded-lg p-6 hover:border-primary transition-colors duration-300 h-full flex flex-col relative`}
+                  >
+                    {/* Indicador de Premium */}
+                    {!reto.isFreeAccess && (
+                      <div className="absolute top-3 right-3">
+                        <Badge
+                          variant="outline"
+                          className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1"
+                        >
+                          <Lock className="h-3 w-3" />
+                          Premium
+                        </Badge>
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-2 mb-2">
                       <CalendarCheck className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">{reto.date}</span>
@@ -273,6 +360,15 @@ export default function RetosPage() {
                     </div>
                     <h2 className="text-xl font-bold mb-2">{reto.title}</h2>
                     <p className="text-muted-foreground mb-4 flex-grow">{reto.description}</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Badge variant="outline">{reto.difficulty}</Badge>
+                      <Badge variant="secondary">{reto.category}</Badge>
+                      {reto.free_access && (
+                        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                          Acceso gratuito
+                        </Badge>
+                      )}
+                    </div>
                     <div className="grid grid-cols-2 gap-4 mt-auto pt-4 border-t border-border">
                       <div className="flex flex-col">
                         <span className="text-sm text-muted-foreground">Categoría</span>
@@ -283,6 +379,23 @@ export default function RetosPage() {
                         <span className="font-medium">{reto.successRate}%</span>
                       </div>
                     </div>
+
+                    {/* Overlay para retos premium si el usuario no es premium */}
+                    {!isPro && !reto.isFreeAccess && (
+                      <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <div className="text-center p-4">
+                          <Lock className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
+                          <p className="text-white font-medium mb-2">Contenido Premium</p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/30"
+                          >
+                            Desbloquear
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Link>
               ))}
@@ -298,6 +411,7 @@ export default function RetosPage() {
                   setSearchTerm("")
                   setSelectedCategory("all")
                   setSelectedDifficulty("all")
+                  setAccessFilter("all")
                 }}
               >
                 Limpiar filtros
