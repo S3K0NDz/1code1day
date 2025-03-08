@@ -8,9 +8,10 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Bell, Menu, LogOut, User, Settings } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
+import { Badge } from "@/components/ui/badge"
 
 export default function NavbarWithUser() {
-  const { user, isLoading, signOut } = useAuth()
+  const { user, isLoading, signOut, isPro } = useAuth()
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
 
@@ -60,6 +61,23 @@ export default function NavbarWithUser() {
               </Link>
             </div>
             <div className="mt-8 pl-7 pr-6">
+              {user && (
+                <div className="flex items-center gap-2 mb-4 pb-4 border-b border-border">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={avatarUrl} alt={displayName} />
+                    <AvatarFallback>{displayName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{displayName}</p>
+                      {isPro && (
+                        <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20">Premium</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col gap-3">
                 <Link href="/reto-diario">
                   <Button variant="ghost" className="w-full justify-start">
@@ -118,6 +136,11 @@ export default function NavbarWithUser() {
               {/* Implementación alternativa del menú desplegable */}
               <div className="relative group">
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  {isPro && (
+                    <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-yellow-500 border-2 border-background z-10 flex items-center justify-center">
+                      <span className="text-[8px] font-bold text-black">PRO</span>
+                    </div>
+                  )}
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={avatarUrl} alt={displayName} />
                     <AvatarFallback>{displayName.substring(0, 2).toUpperCase()}</AvatarFallback>
@@ -127,7 +150,12 @@ export default function NavbarWithUser() {
                 <div className="absolute right-0 mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out z-50">
                   <div className="py-1 bg-popover border border-border rounded-md shadow-md">
                     <div className="px-4 py-2 border-b border-border">
-                      <p className="text-sm font-medium">{displayName}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">{displayName}</p>
+                        {isPro && (
+                          <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20">Premium</Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
 
