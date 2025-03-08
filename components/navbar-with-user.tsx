@@ -129,9 +129,7 @@ export default function NavbarWithUser() {
         <div className="flex flex-1 items-center justify-end">
           {!isLoading && user ? (
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="mr-1" aria-label="Notificaciones">
-                <Bell className="h-5 w-5" />
-              </Button>
+             
 
               {/* Implementación alternativa del menú desplegable */}
               <div className="relative group">
