@@ -23,13 +23,21 @@ export default function CheckoutSuccessPage() {
       }
 
       try {
+        console.log("Verificando sesión:", sessionId)
+
         // Verificar el estado de la sesión en el servidor
         const response = await fetch(`/api/verify-session?session_id=${sessionId}`)
+
+        // Agregar logging para depuración
+        console.log("Respuesta del servidor:", response.status)
+
         const data = await response.json()
+        console.log("Datos de verificación:", data)
 
         if (data.success) {
           setSessionStatus("success")
         } else {
+          console.error("Error en verificación:", data.error)
           setSessionStatus("error")
         }
       } catch (error) {
