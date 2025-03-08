@@ -19,6 +19,7 @@ import {
   Twitter,
   Linkedin,
   Download,
+  Lock,
 } from "lucide-react"
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
@@ -615,10 +616,16 @@ export default function RetoPage() {
                 {reto.difficulty}
               </Badge>
 
-              {/* Indicador de reto gratuito */}
-              {!isPro && isFreeAccess && (
-                <Badge className="ml-2 bg-green-500/20 text-green-500 border-green-500/20">Gratuito</Badge>
-              )}
+              {/* Indicador de Premium o Gratuito */}
+              {!isPro &&
+                (isFreeAccess ? (
+                  <Badge className="ml-2 bg-green-500/20 text-green-500 border-green-500/20">Gratuito</Badge>
+                ) : (
+                  <Badge className="ml-2 bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1">
+                    <Lock className="h-3 w-3" />
+                    Premium
+                  </Badge>
+                ))}
             </div>
             <div className="flex items-center">
               <div className="flex items-center mr-4 bg-secondary px-3 py-1 rounded-md">
@@ -716,10 +723,16 @@ export default function RetoPage() {
                   <Badge className={getDifficultyColor(reto.difficulty)}>{reto.difficulty}</Badge>
                   <Badge variant="outline">{reto.category}</Badge>
 
-                  {/* Indicador de reto gratuito */}
-                  {!isPro && isFreeAccess && (
-                    <Badge className="bg-green-500/20 text-green-500 border-green-500/20">Reto Gratuito</Badge>
-                  )}
+                  {/* Indicador de Premium o Gratuito */}
+                  {!isPro &&
+                    (isFreeAccess ? (
+                      <Badge className="bg-green-500/20 text-green-500 border-green-500/20">Reto Gratuito</Badge>
+                    ) : (
+                      <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1">
+                        <Lock className="h-3 w-3" />
+                        Premium
+                      </Badge>
+                    ))}
                 </div>
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold mb-2">Descripción</h3>

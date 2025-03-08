@@ -338,11 +338,17 @@ export default function RetosPage() {
                   }}
                 >
                   <div
-                    className={`border ${isPro || reto.isFreeAccess ? "border-border" : "border-primary/30"} bg-card/50 rounded-lg p-6 hover:border-primary transition-colors duration-300 h-full flex flex-col relative`}
+                    className={`border ${
+                      isPro || reto.isFreeAccess ? "border-border" : "border-primary/30"
+                    } bg-card/50 rounded-lg p-6 hover:border-primary transition-colors duration-300 h-full flex flex-col relative`}
                   >
-                    {/* Indicador de Premium */}
-                    {!reto.isFreeAccess && (
-                      <div className="absolute top-3 right-3">
+                    {/* Indicador de Premium o Gratuito */}
+                    <div className="absolute top-3 right-3">
+                      {reto.isFreeAccess ? (
+                        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                          Gratuito
+                        </Badge>
+                      ) : (
                         <Badge
                           variant="outline"
                           className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1"
@@ -350,8 +356,8 @@ export default function RetosPage() {
                           <Lock className="h-3 w-3" />
                           Premium
                         </Badge>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
                     <div className="flex items-center gap-2 mb-2">
                       <CalendarCheck className="h-4 w-4 text-muted-foreground" />
@@ -360,15 +366,6 @@ export default function RetosPage() {
                     </div>
                     <h2 className="text-xl font-bold mb-2">{reto.title}</h2>
                     <p className="text-muted-foreground mb-4 flex-grow">{reto.description}</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <Badge variant="outline">{reto.difficulty}</Badge>
-                      <Badge variant="secondary">{reto.category}</Badge>
-                      {reto.free_access && (
-                        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                          Acceso gratuito
-                        </Badge>
-                      )}
-                    </div>
                     <div className="grid grid-cols-2 gap-4 mt-auto pt-4 border-t border-border">
                       <div className="flex flex-col">
                         <span className="text-sm text-muted-foreground">Categoría</span>

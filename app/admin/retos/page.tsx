@@ -595,9 +595,13 @@ function RetoCard({
                 Reto diario: {format(new Date(reto.daily_date), "dd/MM/yyyy")}
               </Badge>
             )}
-            {reto.free_access && (
+            {reto.free_access ? (
               <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
                 Acceso gratuito
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                Premium
               </Badge>
             )}
           </div>
