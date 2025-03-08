@@ -213,18 +213,20 @@ export default function AdminUsuariosPage() {
 
         <main className="container mx-auto px-4 py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2 flex items-center">
-              <UserCog className="mr-2 h-8 w-8" />
+            <h1 className="text-2xl md:text-3xl font-bold mb-2 flex items-center">
+              <UserCog className="mr-2 h-6 w-6 md:h-8 md:w-8" />
               Administración de Usuarios
             </h1>
-            <p className="text-muted-foreground">Gestiona los usuarios de la plataforma y sus permisos</p>
+            <p className="text-sm md:text-base text-muted-foreground">
+              Gestiona los usuarios de la plataforma y sus permisos
+            </p>
           </div>
 
           <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Filtros</CardTitle>
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="text-lg md:text-xl">Filtros</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6 pt-0">
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-grow">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -238,7 +240,7 @@ export default function AdminUsuariosPage() {
                 <div className="flex gap-2 items-center">
                   <Filter className="h-4 w-4 text-muted-foreground" />
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full md:w-[180px]">
                       <SelectValue placeholder="Filtrar por estado" />
                     </SelectTrigger>
                     <SelectContent>
@@ -265,26 +267,29 @@ export default function AdminUsuariosPage() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-4 px-6 font-medium">Usuario</th>
-                        <th className="text-left py-4 px-6 font-medium">Email</th>
-                        <th className="text-center py-4 px-6 font-medium">Estado</th>
-                        <th className="text-center py-4 px-6 font-medium">Pro</th>
-                        <th className="text-center py-4 px-6 font-medium">Admin</th>
-                        <th className="text-center py-4 px-6 font-medium">Acciones</th>
+                        <th className="text-left py-4 px-3 md:px-6 font-medium text-xs md:text-sm">Usuario</th>
+                        <th className="text-left py-4 px-3 md:px-6 font-medium text-xs md:text-sm hidden md:table-cell">
+                          Email
+                        </th>
+                        <th className="text-center py-4 px-3 md:px-6 font-medium text-xs md:text-sm">Estado</th>
+                        <th className="text-center py-4 px-3 md:px-6 font-medium text-xs md:text-sm">Pro</th>
+                        <th className="text-center py-4 px-3 md:px-6 font-medium text-xs md:text-sm">Admin</th>
+                        <th className="text-center py-4 px-3 md:px-6 font-medium text-xs md:text-sm">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredUsers.map((user) => (
                         <tr key={user.id} className="border-b hover:bg-muted/30">
-                          <td className="py-4 px-6">
-                            <div className="font-medium">{user.username}</div>
+                          <td className="py-3 md:py-4 px-3 md:px-6">
+                            <div className="font-medium text-xs md:text-sm">{user.username}</div>
                             <div className="text-xs text-muted-foreground">ID: {user.id.substring(0, 8)}...</div>
+                            <div className="text-xs text-muted-foreground md:hidden">{user.email}</div>
                           </td>
-                          <td className="py-4 px-6">
-                            <div>{user.email}</div>
+                          <td className="py-3 md:py-4 px-3 md:px-6 hidden md:table-cell">
+                            <div className="text-xs md:text-sm">{user.email}</div>
                             <div className="text-xs text-muted-foreground">Creado: {user.created_at}</div>
                           </td>
-                          <td className="py-4 px-6 text-center">
+                          <td className="py-3 md:py-4 px-3 md:px-6 text-center">
                             {user.editing ? (
                               <Select
                                 value={user.status}
@@ -292,7 +297,7 @@ export default function AdminUsuariosPage() {
                                   setUsers(users.map((u) => (u.id === user.id ? { ...u, status: value } : u)))
                                 }
                               >
-                                <SelectTrigger className="w-[120px] mx-auto">
+                                <SelectTrigger className="w-[100px] md:w-[120px] mx-auto text-xs md:text-sm">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -310,6 +315,7 @@ export default function AdminUsuariosPage() {
                                       ? "outline"
                                       : "destructive"
                                 }
+                                className="text-xs"
                               >
                                 {user.status === "active"
                                   ? "Activo"
@@ -319,7 +325,7 @@ export default function AdminUsuariosPage() {
                               </Badge>
                             )}
                           </td>
-                          <td className="py-4 px-6 text-center">
+                          <td className="py-3 md:py-4 px-3 md:px-6 text-center">
                             {user.editing ? (
                               <Switch
                                 checked={user.is_pro}
@@ -328,21 +334,21 @@ export default function AdminUsuariosPage() {
                                 }
                               />
                             ) : user.is_pro ? (
-                              <Check className="h-5 w-5 text-green-500 mx-auto" />
+                              <Check className="h-4 w-4 md:h-5 md:w-5 text-green-500 mx-auto" />
                             ) : (
-                              <X className="h-5 w-5 text-muted-foreground mx-auto" />
+                              <X className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground mx-auto" />
                             )}
                           </td>
-                          <td className="py-4 px-6 text-center">
+                          <td className="py-3 md:py-4 px-3 md:px-6 text-center">
                             <Switch
                               checked={user.is_admin}
                               onCheckedChange={() => toggleAdminStatus(user.id, user.is_admin)}
                             />
                           </td>
-                          <td className="py-4 px-6 text-center">
+                          <td className="py-3 md:py-4 px-3 md:px-6 text-center">
                             {user.editing ? (
-                              <Button size="sm" onClick={() => saveUserChanges(user.id)} className="w-full">
-                                <Save className="h-4 w-4 mr-1" />
+                              <Button size="sm" onClick={() => saveUserChanges(user.id)} className="w-full text-xs">
+                                <Save className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                                 Guardar
                               </Button>
                             ) : (
@@ -350,9 +356,9 @@ export default function AdminUsuariosPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => enableEditing(user.id)}
-                                className="w-full"
+                                className="w-full text-xs"
                               >
-                                <Edit className="h-4 w-4 mr-1" />
+                                <Edit className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                                 Editar
                               </Button>
                             )}
@@ -370,8 +376,8 @@ export default function AdminUsuariosPage() {
 
               {/* Paginación */}
               {filteredUsers.length > 0 && (
-                <div className="p-4 flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
+                <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+                  <div className="text-xs md:text-sm text-muted-foreground">
                     Mostrando {filteredUsers.length} de {users.length} usuarios
                   </div>
                   <div className="flex items-center gap-2">
@@ -383,7 +389,7 @@ export default function AdminUsuariosPage() {
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <span className="text-sm">
+                    <span className="text-xs md:text-sm">
                       Página {page} de {totalPages}
                     </span>
                     <Button

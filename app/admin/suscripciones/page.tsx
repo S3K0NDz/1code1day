@@ -297,23 +297,26 @@ export default function AdminSuscripcionesPage() {
         <NavbarWithUser />
 
         <main className="container mx-auto px-4 py-8">
-          <div className="flex items-center mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-6">
             <Link href="/admin">
               <Button variant="ghost" size="sm" className="mr-2">
                 <ArrowLeft className="h-4 w-4 mr-1" />
-                Volver al panel
+                <span className="hidden sm:inline">Volver al panel</span>
+                <span className="sm:hidden">Volver</span>
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold">Gestión de Suscripciones</h1>
+            <h1 className="text-xl md:text-2xl font-bold">Gestión de Suscripciones</h1>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
             <Card>
-              <CardHeader>
-                <CardTitle>Sincronizar Suscripciones</CardTitle>
-                <CardDescription>Sincroniza las suscripciones de Stripe con la base de datos</CardDescription>
+              <CardHeader className="p-4 md:p-6">
+                <CardTitle className="text-lg md:text-xl">Sincronizar Suscripciones</CardTitle>
+                <CardDescription className="text-xs md:text-sm">
+                  Sincroniza las suscripciones de Stripe con la base de datos
+                </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 md:p-6 pt-0">
                 <Button onClick={syncAllSubscriptions} disabled={syncingAll} className="w-full">
                   {syncingAll ? (
                     <>
@@ -331,12 +334,14 @@ export default function AdminSuscripcionesPage() {
             </Card>
 
             <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Buscar Usuario</CardTitle>
-                <CardDescription>Busca un usuario por email o ID para sincronizar su suscripción</CardDescription>
+              <CardHeader className="p-4 md:p-6">
+                <CardTitle className="text-lg md:text-xl">Buscar Usuario</CardTitle>
+                <CardDescription className="text-xs md:text-sm">
+                  Busca un usuario por email o ID para sincronizar su suscripción
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex gap-2 mb-4">
+              <CardContent className="p-4 md:p-6 pt-0">
+                <div className="flex flex-col sm:flex-row gap-2 mb-4">
                   <div className="flex-grow">
                     <Input
                       placeholder="Email o ID de usuario"
@@ -344,7 +349,7 @@ export default function AdminSuscripcionesPage() {
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Button onClick={searchUsers} disabled={searching || !searchTerm.trim()}>
+                  <Button onClick={searchUsers} disabled={searching || !searchTerm.trim()} className="w-full sm:w-auto">
                     {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                   </Button>
                 </div>
@@ -382,40 +387,44 @@ export default function AdminSuscripcionesPage() {
           </div>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Suscripciones Actuales</CardTitle>
-              <CardDescription>Lista de todas las suscripciones registradas en la base de datos</CardDescription>
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="text-lg md:text-xl">Suscripciones Actuales</CardTitle>
+              <CardDescription className="text-xs md:text-sm">
+                Lista de todas las suscripciones registradas en la base de datos
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {loadingSubscriptions ? (
                 <div className="text-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
                   <p>Cargando suscripciones...</p>
                 </div>
               ) : subscriptions.length > 0 ? (
-                <div className="border rounded-md overflow-hidden">
+                <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-muted/50">
-                        <th className="text-left p-3 font-medium">Usuario</th>
-                        <th className="text-left p-3 font-medium">Plan</th>
-                        <th className="text-left p-3 font-medium">Estado</th>
-                        <th className="text-left p-3 font-medium">Ciclo</th>
-                        <th className="text-left p-3 font-medium">Próxima facturación</th>
-                        <th className="text-center p-3 font-medium">Acciones</th>
+                        <th className="text-left p-3 font-medium text-xs md:text-sm">Usuario</th>
+                        <th className="text-left p-3 font-medium text-xs md:text-sm hidden md:table-cell">Plan</th>
+                        <th className="text-left p-3 font-medium text-xs md:text-sm">Estado</th>
+                        <th className="text-left p-3 font-medium text-xs md:text-sm hidden md:table-cell">Ciclo</th>
+                        <th className="text-left p-3 font-medium text-xs md:text-sm hidden lg:table-cell">
+                          Próxima facturación
+                        </th>
+                        <th className="text-center p-3 font-medium text-xs md:text-sm">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {subscriptions.map((subscription) => (
                         <tr key={subscription.id} className="hover:bg-muted/30">
-                          <td className="p-3">
+                          <td className="p-3 text-xs md:text-sm">
                             <div className="font-medium">{subscription.userEmail || "Usuario desconocido"}</div>
                             <div className="text-xs text-muted-foreground">
                               ID: {subscription.user_id.substring(0, 8)}...
                             </div>
                           </td>
-                          <td className="p-3">{subscription.plan_id}</td>
-                          <td className="p-3">
+                          <td className="p-3 text-xs md:text-sm hidden md:table-cell">{subscription.plan_id}</td>
+                          <td className="p-3 text-xs md:text-sm">
                             {subscription.status === "active" ? (
                               <Badge className="bg-green-500/20 text-green-500 border-green-500/20">Activo</Badge>
                             ) : subscription.status === "canceled" ? (
@@ -424,8 +433,10 @@ export default function AdminSuscripcionesPage() {
                               <Badge variant="outline">{subscription.status}</Badge>
                             )}
                           </td>
-                          <td className="p-3">{subscription.billing_cycle}</td>
-                          <td className="p-3">{new Date(subscription.current_period_end).toLocaleDateString()}</td>
+                          <td className="p-3 text-xs md:text-sm hidden md:table-cell">{subscription.billing_cycle}</td>
+                          <td className="p-3 text-xs md:text-sm hidden lg:table-cell">
+                            {new Date(subscription.current_period_end).toLocaleDateString()}
+                          </td>
                           <td className="p-3 text-center">
                             <Button
                               size="sm"

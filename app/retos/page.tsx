@@ -320,83 +320,37 @@ export default function RetosPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredRetos.map((reto) => (
                 <Link
-                  href={isPro || reto.isFreeAccess ? `/retos/${reto.id}` : "/planes"}
+                  href={`/retos/${reto.id}`}
                   key={reto.id}
-                  onClick={(e) => {
-                    if (!isPro && !reto.isFreeAccess) {
-                      e.preventDefault()
-                      toast({
-                        title: "Contenido Premium",
-                        description: "Este reto solo está disponible para usuarios Premium.",
-                        action: (
-                          <Button variant="default" size="sm" onClick={() => router.push("/planes")}>
-                            Ver planes
-                          </Button>
-                        ),
-                      })
-                    }
-                  }}
-                  className="group"
+                  className="group/card relative rounded-lg border border-muted/50 overflow-hidden transition-shadow hover:shadow-md"
                 >
-                  <div
-                    className={`border ${
-                      isPro || reto.isFreeAccess ? "border-border" : "border-yellow-500/30"
-                    } bg-card/50 rounded-lg p-6 group-hover:border-primary transition-all duration-300 h-full flex flex-col relative ${
-                      !isPro && !reto.isFreeAccess ? "group-hover:shadow-[0_0_15px_rgba(234,179,8,0.15)]" : ""
-                    }`}
-                  >
-                    {/* Indicador de Premium o Gratuito */}
-                    <div className="absolute top-3 right-3 z-10">
-                      {reto.isFreeAccess ? (
-                        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                          Gratuito
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1 transition-all duration-300 group-hover:bg-yellow-500/30"
-                        >
-                          <Lock className="h-3 w-3" />
-                          Premium
-                        </Badge>
-                      )}
+                  <Card className="relative z-10 p-5">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-lg font-semibold">{reto.title}</h3>
+                      <Badge className={getDifficultyColor(reto.difficulty)}>{reto.difficulty}</Badge>
                     </div>
-
-                    <div className="flex items-center gap-2 mb-2">
-                      <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{reto.date}</span>
-                    </div>
-                    <h2 className="text-xl font-bold mb-2">{reto.title}</h2>
-                    <p className="text-muted-foreground mb-4 flex-grow line-clamp-3">{reto.description}</p>
-                    <div className="grid grid-cols-2 gap-4 mt-auto pt-4 border-t border-border">
-                      <div className="flex flex-col">
-                        <span className="text-sm text-muted-foreground">Categoría</span>
-                        <span className="font-medium">{reto.category}</span>
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{reto.description}</p>
+                    <div className="flex justify-between items-center text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <CalendarCheck className="h-3 w-3" />
+                        {reto.date}
                       </div>
-                      <div className="flex flex-col items-end">
-                  
-                        <Badge className={getDifficultyColor(reto.difficulty)}>{reto.difficulty}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-3 w-3" />
+                        {reto.completions}
+                        <span className="ml-1">({reto.successRate}%)</span>
                       </div>
                     </div>
-
-                    {/* Overlay para retos premium si el usuario no es premium */}
-                    {!isPro && !reto.isFreeAccess && (
-                      <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
-                        <div className="text-center p-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                          <Lock className="h-8 w-8 mx-auto mb-3 text-yellow-500" />
-                          <p className="text-white font-medium mb-2">Reto Premium</p>
-                          <p className="text-white/80 text-sm mb-4">Actualiza tu plan para acceder a este reto</p>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/30"
-                          >
-                            Desbloquear
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  </Card>
+                  <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-0 group-hover/card:opacity-80 transition-opacity"></div>
+                  {reto.isFreeAccess ? null : (
+                    <div className="absolute top-2 right-2 z-20">
+                      <Badge variant="secondary" className="opacity-70">
+                        <Lock className="w-3 h-3 mr-1" />
+                        Premium
+                      </Badge>
+                    </div>
+                  )}
                 </Link>
               ))}
             </div>
