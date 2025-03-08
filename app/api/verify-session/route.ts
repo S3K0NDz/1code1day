@@ -61,7 +61,8 @@ export async function GET(req: Request) {
           })
 
           // Crear o actualizar la suscripción en nuestra base de datos
-          const upsertResult = await upsertUserSubscription({
+          // Asegurarnos de que todos los campos requeridos estén presentes
+          const subscriptionData = {
             user_id: userId,
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
@@ -71,13 +72,24 @@ export async function GET(req: Request) {
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
             cancel_at_period_end: subscription.cancel_at_period_end,
             billing_cycle: billingCycle,
-          })
+          }
+
+          console.log("Datos de suscripción a guardar:", subscriptionData)
+
+          const upsertResult = await upsertUserSubscription(subscriptionData)
 
           console.log("Resultado de upsert:", upsertResult)
 
           if (!upsertResult.success) {
             console.error("Error al guardar la suscripción en la base de datos:", upsertResult.error)
-            // Continuamos a pesar del error para intentar actualizar los metadatos del usuario
+            return NextResponse.json(
+              {
+                success: false,
+                error: "Error al guardar la suscripción en la base de datos",
+                details: upsertResult.error,
+              },
+              { status: 500 },
+            )
           }
 
           // Intentar actualizar los metadatos del usuario, pero no fallar si esto no funciona
@@ -104,12 +116,12 @@ export async function GET(req: Request) {
             // No fallamos aquí, solo registramos el error
           }
 
-          // Devolvemos éxito incluso si la actualización de metadatos falló
-          // porque la suscripción ya está registrada en la base de datos
+          // Devolvemos éxito porque la suscripción ya está registrada en la base de datos
           return NextResponse.json({
             success: true,
             session,
-            subscription_saved: upsertResult.success,
+            subscription_saved: true,
+            subscription_id: upsertResult.data,
           })
         } catch (error) {
           console.error("Error al procesar la suscripción:", error)

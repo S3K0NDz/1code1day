@@ -163,9 +163,23 @@ export async function getUserSubscription(userId: string) {
   }
 }
 
+// Modificar la función upsertUserSubscription para añadir más logging y manejo de errores
+
 // Función para crear o actualizar una suscripción
 export async function upsertUserSubscription(subscription: UserSubscription) {
   try {
+    console.log("Iniciando upsertUserSubscription con datos:", {
+      user_id: subscription.user_id,
+      plan_id: subscription.plan_id,
+      status: subscription.status,
+    })
+
+    // Verificar que los datos esenciales estén presentes
+    if (!subscription.user_id) {
+      console.error("Error: user_id es requerido para upsertUserSubscription")
+      return { success: false, error: "user_id es requerido" }
+    }
+
     // Verificar si ya existe una suscripción para este usuario
     const { data: existingData, error: fetchError } = await supabase
       .from("user_subscriptions")
@@ -173,45 +187,70 @@ export async function upsertUserSubscription(subscription: UserSubscription) {
       .eq("user_id", subscription.user_id)
       .maybeSingle()
 
-    if (fetchError) throw fetchError
+    if (fetchError) {
+      console.error("Error al buscar suscripción existente:", fetchError)
+      throw fetchError
+    }
+
+    console.log("Resultado de búsqueda de suscripción existente:", existingData)
 
     // Si ya existe, actualizar
     if (existingData) {
-      const { error } = await supabase
-        .from("user_subscriptions")
-        .update({
-          stripe_customer_id: subscription.stripe_customer_id,
-          stripe_subscription_id: subscription.stripe_subscription_id,
-          plan_id: subscription.plan_id,
-          status: subscription.status,
-          current_period_start: subscription.current_period_start,
-          current_period_end: subscription.current_period_end,
-          cancel_at_period_end: subscription.cancel_at_period_end,
-          canceled_at: subscription.canceled_at,
-          billing_cycle: subscription.billing_cycle,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existingData.id)
+      console.log("Actualizando suscripción existente con ID:", existingData.id)
 
-      if (error) throw error
+      const updateData = {
+        stripe_customer_id: subscription.stripe_customer_id,
+        stripe_subscription_id: subscription.stripe_subscription_id,
+        plan_id: subscription.plan_id,
+        status: subscription.status,
+        current_period_start: subscription.current_period_start,
+        current_period_end: subscription.current_period_end,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        canceled_at: subscription.canceled_at,
+        billing_cycle: subscription.billing_cycle,
+        updated_at: new Date().toISOString(),
+      }
+
+      console.log("Datos de actualización:", updateData)
+
+      const { data: updatedData, error } = await supabase
+        .from("user_subscriptions")
+        .update(updateData)
+        .eq("id", existingData.id)
+        .select()
+
+      if (error) {
+        console.error("Error al actualizar suscripción:", error)
+        throw error
+      }
+
+      console.log("Suscripción actualizada correctamente:", updatedData)
       return { success: true, data: existingData.id }
     }
     // Si no existe, crear
     else {
-      const { data, error } = await supabase
-        .from("user_subscriptions")
-        .insert({
-          ...subscription,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select()
+      console.log("Creando nueva suscripción para usuario:", subscription.user_id)
 
-      if (error) throw error
-      return { success: true, data: data[0].id }
+      const insertData = {
+        ...subscription,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      console.log("Datos de inserción:", insertData)
+
+      const { data, error } = await supabase.from("user_subscriptions").insert(insertData).select()
+
+      if (error) {
+        console.error("Error al insertar suscripción:", error)
+        throw error
+      }
+
+      console.log("Nueva suscripción creada correctamente:", data)
+      return { success: true, data: data[0]?.id }
     }
   } catch (error) {
-    console.error("Error upserting user subscription:", error)
+    console.error("Error en upsertUserSubscription:", error)
     return { success: false, error }
   }
 }
