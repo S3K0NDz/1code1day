@@ -261,8 +261,8 @@ export async function cancelUserSubscription(userId: string) {
     const { error } = await supabase
       .from("user_subscriptions")
       .update({
-        status: "canceled",
-        canceled_at: new Date().toISOString(),
+        status: "canceling",
+        cancel_at_period_end: true,
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", userId)

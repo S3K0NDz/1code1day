@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, CreditCard, Calendar, AlertCircle, Loader2 } from "lucide-react"
+import { ArrowLeft, CreditCard, Calendar, AlertCircle, Loader2, AlertTriangle } from "lucide-react"
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { useAuth } from "@/components/auth-provider"
@@ -28,6 +28,65 @@ export default function SuscripcionPage() {
   // Obtener información de la suscripción del usuario
   const [subscriptionData, setSubscriptionData] = useState<any>(null)
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true)
+
+  // Añadir un nuevo estado para controlar el proceso de cancelación
+  const [isCanceling, setIsCanceling] = useState(false)
+
+  // Añadir la función para manejar la cancelación de la suscripción
+  const handleCancelSubscription = async () => {
+    if (!user) return
+
+    // Mostrar un diálogo de confirmación
+    if (
+      !confirm(
+        "¿Estás seguro de que deseas cancelar tu suscripción? Seguirás teniendo acceso Premium hasta el final del período actual.",
+      )
+    ) {
+      return
+    }
+
+    setIsCanceling(true)
+    try {
+      const response = await fetch("/api/cancel-subscription", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.id,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "No se pudo cancelar la suscripción")
+      }
+
+      toast({
+        title: "Suscripción cancelada",
+        description: "Tu suscripción se cancelará al final del período actual.",
+      })
+
+      // Actualizar los datos de suscripción localmente
+      if (subscriptionData) {
+        setSubscriptionData({
+          ...subscriptionData,
+          cancelAtPeriodEnd: true,
+          status: "canceling",
+        })
+      }
+    } catch (error) {
+      console.error("Error al cancelar la suscripción:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo cancelar la suscripción",
+        variant: "destructive",
+      })
+    } finally {
+      setIsCanceling(false)
+    }
+  }
 
   useEffect(() => {
     const fetchSubscriptionData = async () => {
@@ -76,7 +135,11 @@ export default function SuscripcionPage() {
     fetchSubscriptionData()
   }, [user])
 
-  const isPro = subscriptionData?.plan === "premium" && subscriptionData?.status === "active"
+  // Modificar la variable isPro para tener en cuenta el estado cancelAtPeriodEnd
+  const isPro =
+    subscriptionData?.plan === "premium" &&
+    (subscriptionData?.status === "active" ||
+      (subscriptionData?.status === "canceling" && !subscriptionData?.cancelAtPeriodEnd))
 
   const handleManageSubscription = async () => {
     if (!user) return
@@ -144,6 +207,7 @@ export default function SuscripcionPage() {
           {isPro ? (
             <Card className="mb-8">
               <CardHeader>
+                {/* Dentro del Card para usuarios Premium, actualizar el Badge de estado */}
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Plan Premium</CardTitle>
@@ -151,7 +215,11 @@ export default function SuscripcionPage() {
                       {subscriptionData?.cycle === "monthly" ? "Facturación mensual" : "Facturación anual"}
                     </CardDescription>
                   </div>
-                  <Badge className="bg-green-500/20 text-green-500 border-green-500/20">Activo</Badge>
+                  {subscriptionData?.cancelAtPeriodEnd ? (
+                    <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20">Cancelando</Badge>
+                  ) : (
+                    <Badge className="bg-green-500/20 text-green-500 border-green-500/20">Activo</Badge>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -165,6 +233,17 @@ export default function SuscripcionPage() {
                     <span className="text-sm text-muted-foreground">•••• 4242</span>
                   </div>
                 </div>
+                {subscriptionData?.cancelAtPeriodEnd && (
+                  <div className="p-4 bg-yellow-500/10 rounded-lg mt-4 border border-yellow-500/20">
+                    <p className="text-sm flex items-center">
+                      <AlertTriangle className="h-4 w-4 text-yellow-500 mr-2" />
+                      <span>
+                        Tu suscripción se cancelará automáticamente el {subscriptionData?.endDate}. Hasta entonces,
+                        seguirás teniendo acceso a todas las funciones Premium.
+                      </span>
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -223,6 +302,26 @@ export default function SuscripcionPage() {
                     "Gestionar suscripción"
                   )}
                 </Button>
+
+                {/* Añadir el botón de cancelación */}
+                {isPro && !subscriptionData?.cancelAtPeriodEnd && (
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto text-red-500 hover:bg-red-500/10"
+                    onClick={handleCancelSubscription}
+                    disabled={isCanceling}
+                  >
+                    {isCanceling ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Cancelando...
+                      </>
+                    ) : (
+                      "Cancelar suscripción"
+                    )}
+                  </Button>
+                )}
+
                 <Button variant="outline" className="w-full sm:w-auto" asChild>
                   <Link href="/planes">Ver todos los planes</Link>
                 </Button>
