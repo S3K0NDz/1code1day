@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 import { supabase } from "@/lib/supabase"
+import { upsertUserSubscription } from "@/lib/db-functions"
 
 // Inicializar Stripe con tu clave secreta
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -28,21 +29,42 @@ export async function GET(req: Request) {
     const plan = session.metadata?.plan || "premium"
     const billingCycle = session.metadata?.billingCycle || "monthly"
 
-    if (userId) {
-      // Actualizar el estado de suscripción del usuario en la base de datos
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
-        user_metadata: {
-          is_pro: true,
-          subscription_plan: plan,
-          subscription_cycle: billingCycle,
-          subscription_start: new Date().toISOString(),
-          subscription_id: session.subscription,
-        },
-      })
+    if (userId && session.subscription) {
+      try {
+        // Obtener detalles de la suscripción
+        const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
 
-      if (error) {
-        console.error("Error al actualizar el usuario:", error)
-        return NextResponse.json({ success: false, error: "Error al actualizar el usuario" }, { status: 500 })
+        // Crear o actualizar la suscripción en nuestra base de datos
+        await upsertUserSubscription({
+          user_id: userId,
+          stripe_customer_id: session.customer as string,
+          stripe_subscription_id: session.subscription as string,
+          plan_id: plan,
+          status: subscription.status,
+          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          cancel_at_period_end: subscription.cancel_at_period_end,
+          billing_cycle: billingCycle,
+        })
+
+        // También actualizar los metadatos del usuario para mantener compatibilidad
+        const { error } = await supabase.auth.admin.updateUserById(userId, {
+          user_metadata: {
+            is_pro: true,
+            subscription_plan: plan,
+            subscription_cycle: billingCycle,
+            subscription_start: new Date().toISOString(),
+            subscription_id: session.subscription,
+          },
+        })
+
+        if (error) {
+          console.error("Error al actualizar el usuario:", error)
+          return NextResponse.json({ success: false, error: "Error al actualizar el usuario" }, { status: 500 })
+        }
+      } catch (error) {
+        console.error("Error al procesar la suscripción:", error)
+        return NextResponse.json({ success: false, error: "Error al procesar la suscripción" }, { status: 500 })
       }
     }
 

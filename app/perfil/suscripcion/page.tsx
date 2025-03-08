@@ -12,6 +12,7 @@ import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import { toast } from "@/components/ui/use-toast"
+import { getUserSubscription } from "@/lib/api"
 
 export default function SuscripcionPage() {
   const { user, isLoading } = useAuth()
@@ -25,21 +26,57 @@ export default function SuscripcionPage() {
   }, [user, isLoading, router])
 
   // Obtener información de la suscripción del usuario
-  const subscriptionData = user?.user_metadata?.subscription_plan
-    ? {
-        plan: user.user_metadata.subscription_plan,
-        cycle: user.user_metadata.subscription_cycle || "monthly",
-        status: user.user_metadata.subscription_status || "active",
-        startDate: user.user_metadata.subscription_start
-          ? new Date(user.user_metadata.subscription_start).toLocaleDateString()
-          : "N/A",
-        endDate: user.user_metadata.subscription_current_period_end
-          ? new Date(user.user_metadata.subscription_current_period_end).toLocaleDateString()
-          : "N/A",
-      }
-    : null
+  const [subscriptionData, setSubscriptionData] = useState<any>(null)
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true)
 
-  const isPro = user?.user_metadata?.is_pro || false
+  useEffect(() => {
+    const fetchSubscriptionData = async () => {
+      if (!user) return
+
+      try {
+        setIsLoadingSubscription(true)
+
+        // Obtener la suscripción de la base de datos
+        const { data: subscription, success } = await getUserSubscription(user.id)
+
+        if (success && subscription) {
+          setSubscriptionData({
+            plan: subscription.plan_id,
+            cycle: subscription.billing_cycle,
+            status: subscription.status,
+            startDate: new Date(subscription.current_period_start).toLocaleDateString(),
+            endDate: new Date(subscription.current_period_end).toLocaleDateString(),
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          })
+        } else {
+          // Fallback a los metadatos del usuario para compatibilidad
+          setSubscriptionData(
+            user?.user_metadata?.subscription_plan
+              ? {
+                  plan: user.user_metadata.subscription_plan,
+                  cycle: user.user_metadata.subscription_cycle || "monthly",
+                  status: user.user_metadata.subscription_status || "active",
+                  startDate: user.user_metadata.subscription_start
+                    ? new Date(user.user_metadata.subscription_start).toLocaleDateString()
+                    : "N/A",
+                  endDate: user.user_metadata.subscription_current_period_end
+                    ? new Date(user.user_metadata.subscription_current_period_end).toLocaleDateString()
+                    : "N/A",
+                }
+              : null,
+          )
+        }
+      } catch (error) {
+        console.error("Error al obtener datos de suscripción:", error)
+      } finally {
+        setIsLoadingSubscription(false)
+      }
+    }
+
+    fetchSubscriptionData()
+  }, [user])
+
+  const isPro = subscriptionData?.plan === "premium" && subscriptionData?.status === "active"
 
   const handleManageSubscription = async () => {
     if (!user) return
@@ -75,7 +112,7 @@ export default function SuscripcionPage() {
     }
   }
 
-  if (isLoading) {
+  if (isLoading || isLoadingSubscription) {
     return (
       <InteractiveGridBackground>
         <div className="min-h-screen flex items-center justify-center">

@@ -12,6 +12,7 @@ import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { useAuth } from "@/components/auth-provider"
 import { loadStripe } from "@stripe/stripe-js"
 import { toast } from "@/components/ui/use-toast"
+import { getUserSubscription } from "@/lib/db-functions"
 
 // Cargar Stripe fuera del componente para evitar recargas innecesarias
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "")
@@ -19,6 +20,7 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 export default function CheckoutPage() {
   const [billingCycle, setBillingCycle] = useState("monthly")
   const [isLoading, setIsLoading] = useState(false)
+  const [subscription, setSubscription] = useState<any>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, isLoading: authLoading } = useAuth()
@@ -31,6 +33,30 @@ export default function CheckoutPage() {
     if (!authLoading && !user) {
       router.push("/login?redirect=/checkout")
     }
+
+    // Verificar si el usuario ya tiene una suscripción activa
+    const checkSubscription = async () => {
+      if (!user) return
+
+      try {
+        const { data, success } = await getUserSubscription(user.id)
+
+        if (success && data && data.plan_id === "premium" && data.status === "active") {
+          // El usuario ya tiene una suscripción premium activa
+          toast({
+            title: "Ya tienes una suscripción activa",
+            description: "Serás redirigido a tu perfil de suscripción.",
+          })
+          router.push("/perfil/suscripcion")
+        } else {
+          setSubscription(data)
+        }
+      } catch (error) {
+        console.error("Error al verificar la suscripción:", error)
+      }
+    }
+
+    checkSubscription()
   }, [user, authLoading, router])
 
   // Mejorar el manejo de errores en la función handleCheckout

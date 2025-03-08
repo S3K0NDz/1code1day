@@ -6,6 +6,8 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import type { Session, User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
+// Añadir la importación de getUserSubscription
+import { getUserSubscription } from "@/lib/db-functions"
 
 // Ampliamos la interfaz del usuario para incluir is_admin
 type ExtendedUser = User & {
@@ -14,11 +16,15 @@ type ExtendedUser = User & {
   }
 }
 
+// Ampliar la interfaz AuthContextType para incluir información de suscripción
 type AuthContextType = {
   user: ExtendedUser | null
   session: Session | null
   isLoading: boolean
   isAdmin: boolean
+  subscription: any | null
+  isSubscriptionLoading: boolean
+  isPro: boolean
   signIn: (
     email: string,
     password: string,
@@ -52,6 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
+  // Dentro de la función AuthProvider, añadir estos estados:
+  const [subscription, setSubscription] = useState<any>(null)
+  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(true)
+  const [isPro, setIsPro] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -87,6 +97,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe()
     }
   }, [router])
+
+  // Añadir este useEffect para cargar la información de suscripción
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      if (!user) {
+        setSubscription(null)
+        setIsPro(false)
+        setIsSubscriptionLoading(false)
+        return
+      }
+
+      try {
+        setIsSubscriptionLoading(true)
+        const { data, success } = await getUserSubscription(user.id)
+
+        if (success && data) {
+          setSubscription(data)
+          setIsPro(data.plan_id === "premium" && data.status === "active")
+        } else {
+          // Fallback a los metadatos del usuario
+          setIsPro(!!user.user_metadata?.is_pro)
+        }
+      } catch (error) {
+        console.error("Error fetching subscription:", error)
+        // Fallback a los metadatos del usuario
+        setIsPro(!!user.user_metadata?.is_pro)
+      } finally {
+        setIsSubscriptionLoading(false)
+      }
+    }
+
+    fetchSubscription()
+  }, [user])
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -142,11 +185,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/login")
   }
 
+  // Actualizar el objeto value para incluir la información de suscripción
   const value = {
     user,
     session,
     isLoading,
     isAdmin,
+    subscription,
+    isSubscriptionLoading,
+    isPro,
     signIn,
     signUp,
     signInWithMagicLink,

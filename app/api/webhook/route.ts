@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 import { supabase } from "@/lib/supabase"
+import { upsertUserSubscription } from "@/lib/db-functions"
 
 // Inicializar Stripe con tu clave secreta
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -33,20 +34,40 @@ export async function POST(req: Request) {
       const plan = session.metadata?.plan || "premium"
       const billingCycle = session.metadata?.billingCycle || "monthly"
 
-      if (userId) {
-        // Actualizar el estado de suscripción del usuario en la base de datos
-        const { error } = await supabase.auth.admin.updateUserById(userId, {
-          user_metadata: {
-            is_pro: true,
-            subscription_plan: plan,
-            subscription_cycle: billingCycle,
-            subscription_start: new Date().toISOString(),
-            subscription_id: session.subscription,
-          },
-        })
+      if (userId && session.subscription) {
+        try {
+          // Obtener detalles de la suscripción
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
 
-        if (error) {
-          console.error("Error al actualizar el usuario:", error)
+          // Crear o actualizar la suscripción en nuestra base de datos
+          await upsertUserSubscription({
+            user_id: userId,
+            stripe_customer_id: session.customer as string,
+            stripe_subscription_id: session.subscription as string,
+            plan_id: plan,
+            status: subscription.status,
+            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            billing_cycle: billingCycle,
+          })
+
+          // También actualizar los metadatos del usuario para mantener compatibilidad
+          const { error } = await supabase.auth.admin.updateUserById(userId, {
+            user_metadata: {
+              is_pro: true,
+              subscription_plan: plan,
+              subscription_cycle: billingCycle,
+              subscription_start: new Date().toISOString(),
+              subscription_id: session.subscription,
+            },
+          })
+
+          if (error) {
+            console.error("Error al actualizar el usuario:", error)
+          }
+        } catch (error) {
+          console.error("Error al procesar checkout.session.completed:", error)
         }
       }
       break
@@ -55,57 +76,90 @@ export async function POST(req: Request) {
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription
 
-      // Buscar el usuario por subscription_id en los metadatos
-      const { data: users, error } = await supabase
-        .from("users")
-        .select("id, user_metadata")
-        .filter("user_metadata->subscription_id", "eq", subscription.id)
+      try {
+        // Buscar el usuario por subscription_id en la tabla user_subscriptions
+        const { data: subscriptions, error } = await supabase
+          .from("user_subscriptions")
+          .select("user_id")
+          .eq("stripe_subscription_id", subscription.id)
+          .limit(1)
 
-      if (error || !users || users.length === 0) {
-        console.error("Error al buscar usuario por subscription_id:", error)
-        break
+        if (error || !subscriptions || subscriptions.length === 0) {
+          console.error("Error al buscar usuario por subscription_id:", error)
+          break
+        }
+
+        const userId = subscriptions[0].user_id
+
+        // Actualizar la suscripción en nuestra base de datos
+        await upsertUserSubscription({
+          user_id: userId,
+          stripe_customer_id: subscription.customer as string,
+          stripe_subscription_id: subscription.id,
+          plan_id: subscription.metadata?.plan || "premium",
+          status: subscription.status,
+          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          cancel_at_period_end: subscription.cancel_at_period_end,
+          billing_cycle: subscription.metadata?.billingCycle || "monthly",
+        })
+
+        // También actualizar los metadatos del usuario para mantener compatibilidad
+        await supabase.auth.admin.updateUserById(userId, {
+          user_metadata: {
+            subscription_status: subscription.status,
+            subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          },
+        })
+      } catch (error) {
+        console.error("Error al procesar customer.subscription.updated:", error)
       }
-
-      const user = users[0]
-
-      // Actualizar el estado de la suscripción
-      await supabase.auth.admin.updateUserById(user.id, {
-        user_metadata: {
-          ...user.user_metadata,
-          subscription_status: subscription.status,
-          subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-        },
-      })
-
       break
     }
 
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription
 
-      // Buscar el usuario por subscription_id en los metadatos
-      const { data: users, error } = await supabase
-        .from("users")
-        .select("id, user_metadata")
-        .filter("user_metadata->subscription_id", "eq", subscription.id)
+      try {
+        // Buscar el usuario por subscription_id en la tabla user_subscriptions
+        const { data: subscriptions, error } = await supabase
+          .from("user_subscriptions")
+          .select("user_id")
+          .eq("stripe_subscription_id", subscription.id)
+          .limit(1)
 
-      if (error || !users || users.length === 0) {
-        console.error("Error al buscar usuario por subscription_id:", error)
-        break
+        if (error || !subscriptions || subscriptions.length === 0) {
+          console.error("Error al buscar usuario por subscription_id:", error)
+          break
+        }
+
+        const userId = subscriptions[0].user_id
+
+        // Actualizar la suscripción en nuestra base de datos
+        await upsertUserSubscription({
+          user_id: userId,
+          stripe_customer_id: subscription.customer as string,
+          stripe_subscription_id: subscription.id,
+          plan_id: "free", // Volver al plan gratuito
+          status: "canceled",
+          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          cancel_at_period_end: true,
+          canceled_at: new Date().toISOString(),
+          billing_cycle: "monthly",
+        })
+
+        // También actualizar los metadatos del usuario para mantener compatibilidad
+        await supabase.auth.admin.updateUserById(userId, {
+          user_metadata: {
+            is_pro: false,
+            subscription_status: "canceled",
+            subscription_end: new Date().toISOString(),
+          },
+        })
+      } catch (error) {
+        console.error("Error al procesar customer.subscription.deleted:", error)
       }
-
-      const user = users[0]
-
-      // Actualizar el estado de la suscripción
-      await supabase.auth.admin.updateUserById(user.id, {
-        user_metadata: {
-          ...user.user_metadata,
-          is_pro: false,
-          subscription_status: "canceled",
-          subscription_end: new Date().toISOString(),
-        },
-      })
-
       break
     }
 

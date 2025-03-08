@@ -9,7 +9,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 // Modificar la función POST para manejar mejor los errores y verificar los IDs de precio
 export async function POST(req: Request) {
   try {
-    const { plan, billingCycle } = await req.json()
+    const { plan, billingCycle, userId } = await req.json()
+
+    if (!userId) {
+      return NextResponse.json({ error: "Se requiere el ID de usuario" }, { status: 400 })
+    }
 
     // Determinar el precio basado en el plan y ciclo de facturación
     let priceId
@@ -52,9 +56,18 @@ export async function POST(req: Request) {
       mode: "subscription",
       success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/planes`,
+      client_reference_id: userId, // Usar client_reference_id para almacenar el ID de usuario
       metadata: {
         plan,
         billingCycle,
+        userId, // También lo guardamos en metadata por redundancia
+      },
+      subscription_data: {
+        metadata: {
+          plan,
+          billingCycle,
+          userId,
+        },
       },
     })
 

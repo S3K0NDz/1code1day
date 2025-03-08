@@ -133,3 +133,106 @@ export async function getUserSavedChallenges(userId: string) {
   }
 }
 
+// Añadir estas nuevas interfaces y funciones al final del archivo
+
+// Interfaz para las suscripciones de usuario
+export interface UserSubscription {
+  id?: string
+  user_id: string
+  stripe_customer_id?: string
+  stripe_subscription_id?: string
+  plan_id: string
+  status: string
+  current_period_start: string
+  current_period_end: string
+  cancel_at_period_end: boolean
+  canceled_at?: string
+  billing_cycle: string
+}
+
+// Función para obtener la suscripción de un usuario
+export async function getUserSubscription(userId: string) {
+  try {
+    const { data, error } = await supabase.from("user_subscriptions").select("*").eq("user_id", userId).maybeSingle()
+
+    if (error) throw error
+    return { success: true, data }
+  } catch (error) {
+    console.error("Error fetching user subscription:", error)
+    return { success: false, error }
+  }
+}
+
+// Función para crear o actualizar una suscripción
+export async function upsertUserSubscription(subscription: UserSubscription) {
+  try {
+    // Verificar si ya existe una suscripción para este usuario
+    const { data: existingData, error: fetchError } = await supabase
+      .from("user_subscriptions")
+      .select("id")
+      .eq("user_id", subscription.user_id)
+      .maybeSingle()
+
+    if (fetchError) throw fetchError
+
+    // Si ya existe, actualizar
+    if (existingData) {
+      const { error } = await supabase
+        .from("user_subscriptions")
+        .update({
+          stripe_customer_id: subscription.stripe_customer_id,
+          stripe_subscription_id: subscription.stripe_subscription_id,
+          plan_id: subscription.plan_id,
+          status: subscription.status,
+          current_period_start: subscription.current_period_start,
+          current_period_end: subscription.current_period_end,
+          cancel_at_period_end: subscription.cancel_at_period_end,
+          canceled_at: subscription.canceled_at,
+          billing_cycle: subscription.billing_cycle,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingData.id)
+
+      if (error) throw error
+      return { success: true, data: existingData.id }
+    }
+    // Si no existe, crear
+    else {
+      const { data, error } = await supabase
+        .from("user_subscriptions")
+        .insert({
+          ...subscription,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+
+      if (error) throw error
+      return { success: true, data: data[0].id }
+    }
+  } catch (error) {
+    console.error("Error upserting user subscription:", error)
+    return { success: false, error }
+  }
+}
+
+// Función para cancelar una suscripción
+export async function cancelUserSubscription(userId: string) {
+  try {
+    const { error } = await supabase
+      .from("user_subscriptions")
+      .update({
+        status: "canceled",
+        canceled_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId)
+
+    if (error) throw error
+    return { success: true }
+  } catch (error) {
+    console.error("Error canceling user subscription:", error)
+    return { success: false, error }
+  }
+}
+

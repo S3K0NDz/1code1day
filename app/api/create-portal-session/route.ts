@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 import { supabase } from "@/lib/supabase"
+import { getUserSubscription } from "@/lib/db-functions"
 
 // Inicializar Stripe con tu clave secreta
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -15,25 +16,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Se requiere el ID de usuario" }, { status: 400 })
     }
 
-    // Obtener los datos del usuario
-    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId)
+    // Obtener la suscripción del usuario
+    const { data: subscription, success } = await getUserSubscription(userId)
 
-    if (userError || !userData?.user) {
-      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
-    }
-
-    const user = userData.user
-    const subscriptionId = user.user_metadata?.subscription_id
-
-    if (!subscriptionId) {
+    if (!success || !subscription) {
       return NextResponse.json({ error: "El usuario no tiene una suscripción activa" }, { status: 400 })
     }
 
-    // Buscar el cliente de Stripe asociado con este usuario
-    let customerId = user.user_metadata?.stripe_customer_id
+    // Verificar que tenemos un customer_id
+    let customerId = subscription.stripe_customer_id
 
     // Si no existe un cliente, crear uno nuevo
     if (!customerId) {
+      // Obtener los datos del usuario
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId)
+
+      if (userError || !userData?.user) {
+        return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
+      }
+
+      const user = userData.user
+
       const customer = await stripe.customers.create({
         email: user.email,
         metadata: {
@@ -43,13 +46,15 @@ export async function POST(req: Request) {
 
       customerId = customer.id
 
-      // Actualizar el usuario con el ID del cliente
-      await supabase.auth.admin.updateUserById(user.id, {
-        user_metadata: {
-          ...user.user_metadata,
-          stripe_customer_id: customerId,
-        },
-      })
+      // Actualizar la suscripción con el ID del cliente
+      const { data, error } = await supabase
+        .from("user_subscriptions")
+        .update({ stripe_customer_id: customerId })
+        .eq("id", subscription.id)
+
+      if (error) {
+        console.error("Error al actualizar el ID del cliente:", error)
+      }
     }
 
     // Crear una sesión del portal de clientes
