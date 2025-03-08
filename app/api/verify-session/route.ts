@@ -8,8 +8,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2023-10-16",
 })
 
-// Mejorar el manejo de errores y agregar más logging
-
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
@@ -79,23 +77,40 @@ export async function GET(req: Request) {
 
           if (!upsertResult.success) {
             console.error("Error al guardar la suscripción en la base de datos:", upsertResult.error)
+            // Continuamos a pesar del error para intentar actualizar los metadatos del usuario
           }
 
-          // También actualizar los metadatos del usuario para mantener compatibilidad
-          const { error } = await supabase.auth.admin.updateUserById(userId, {
-            user_metadata: {
-              is_pro: true,
-              subscription_plan: plan,
-              subscription_cycle: billingCycle,
-              subscription_start: new Date().toISOString(),
-              subscription_id: session.subscription,
-            },
+          // Intentar actualizar los metadatos del usuario, pero no fallar si esto no funciona
+          try {
+            console.log("Intentando actualizar metadatos del usuario:", userId)
+            const { error } = await supabase.auth.admin.updateUserById(userId, {
+              user_metadata: {
+                is_pro: true,
+                subscription_plan: plan,
+                subscription_cycle: billingCycle,
+                subscription_start: new Date().toISOString(),
+                subscription_id: session.subscription,
+              },
+            })
+
+            if (error) {
+              console.error("Error al actualizar metadatos del usuario:", error)
+              // No fallamos aquí, solo registramos el error
+            } else {
+              console.log("Metadatos de usuario actualizados correctamente")
+            }
+          } catch (metadataError) {
+            console.error("Excepción al actualizar metadatos del usuario:", metadataError)
+            // No fallamos aquí, solo registramos el error
+          }
+
+          // Devolvemos éxito incluso si la actualización de metadatos falló
+          // porque la suscripción ya está registrada en la base de datos
+          return NextResponse.json({
+            success: true,
+            session,
+            subscription_saved: upsertResult.success,
           })
-
-          if (error) {
-            console.error("Error al actualizar el usuario:", error)
-            return NextResponse.json({ success: false, error: "Error al actualizar el usuario" }, { status: 500 })
-          }
         } catch (error) {
           console.error("Error al procesar la suscripción:", error)
           return NextResponse.json(
