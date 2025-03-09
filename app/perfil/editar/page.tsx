@@ -18,6 +18,8 @@ import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { useAuth } from "@/components/auth-provider"
 import { supabase } from "@/lib/supabase"
+// Importar el componente EmailNotificationToggle
+import { EmailNotificationToggle } from "@/components/email-notification-toggle"
 
 export default function EditarPerfilPage() {
   const { user, isLoading } = useAuth()
@@ -36,6 +38,7 @@ export default function EditarPerfilPage() {
     pushNotifications: true,
     marketingEmails: false,
   })
+  const [profile, setProfile] = useState(null)
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -59,6 +62,19 @@ export default function EditarPerfilPage() {
         pushNotifications: user.user_metadata?.push_notifications !== false,
         marketingEmails: user.user_metadata?.marketing_emails === true,
       })
+
+      // Fetch profile data
+      const fetchProfile = async () => {
+        const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+
+        if (error) {
+          console.error("Error fetching profile:", error)
+        } else {
+          setProfile(data)
+        }
+      }
+
+      fetchProfile()
     }
   }, [user])
 
@@ -404,6 +420,10 @@ export default function EditarPerfilPage() {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              <div className="mt-6 mb-4">
+                <EmailNotificationToggle userId={user.id} initialValue={profile?.email_notifications || false} />
+              </div>
 
               <div className="flex justify-end gap-4 mt-6">
                 <Link href="/perfil">
