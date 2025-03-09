@@ -9,7 +9,20 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Clock, Filter, Lock, Search, Trophy, X, Tag, BarChart3, Sparkles, CalendarDays } from "lucide-react"
+import {
+  Calendar,
+  Clock,
+  Filter,
+  Lock,
+  Search,
+  Trophy,
+  X,
+  Tag,
+  BarChart3,
+  Sparkles,
+  CalendarDays,
+  UserRound,
+} from "lucide-react"
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { supabase } from "@/lib/supabase"
@@ -24,15 +37,17 @@ export default function RetosPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [difficulty, setDifficulty] = useState("all")
   const [category, setCategory] = useState("all")
-  const [retoType, setRetoType] = useState("all") // Nuevo filtro para tipo de reto (normal/diario)
+  const [retoType, setRetoType] = useState("all")
   const [showFilters, setShowFilters] = useState(false)
   const [categories, setCategories] = useState([])
   const [difficulties, setDifficulties] = useState([])
   const [completedChallenges, setCompletedChallenges] = useState([])
   const [premiumModalVisible, setPremiumModalVisible] = useState(false)
   const [selectedPremiumReto, setSelectedPremiumReto] = useState(null)
+  const [loginModalVisible, setLoginModalVisible] = useState(false)
+  const [selectedReto, setSelectedReto] = useState(null)
   const [activeTab, setActiveTab] = useState("free")
-  const { user, isPro } = useAuth()
+  const { user, isPro, isLoading: authLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -189,16 +204,26 @@ export default function RetosPage() {
   }
 
   const handleRetoClick = (reto) => {
-    // Si el usuario no es premium y el reto no es de acceso gratuito
-    if (!isPro && !reto.isFreeAccess) {
-      setSelectedPremiumReto(reto)
-      setPremiumModalVisible(true)
-      // No navegamos directamente, mostramos el modal primero
+    // Primero verificar si el usuario está autenticado
+    if (!user) {
+      setSelectedReto(reto)
+      setLoginModalVisible(true)
       return
     }
 
-    // Si es usuario premium o el reto es gratuito, navegamos normalmente
+    // Si el usuario está autenticado pero no es premium y el reto no es de acceso gratuito
+    if (!isPro && !reto.isFreeAccess) {
+      setSelectedPremiumReto(reto)
+      setPremiumModalVisible(true)
+      return
+    }
+
+    // Si el usuario está autenticado y tiene los permisos necesarios, navegar al reto
     router.push(`/retos/${reto.id}`)
+  }
+
+  const handleGoToLogin = () => {
+    router.push("/login")
   }
 
   const handleGoToPricingPage = () => {
@@ -239,6 +264,34 @@ export default function RetosPage() {
               </Link>
             </div>
           </div>
+
+          {/* Mensaje para usuarios no autenticados */}
+          {!authLoading && !user && (
+            <div className="mb-6 p-4 border border-blue-500/30 bg-blue-500/5 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="bg-blue-500/20 p-2 rounded-full">
+                  <UserRound className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1">Inicia sesión para acceder a los retos</h3>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Puedes explorar todos los retos disponibles, pero necesitas iniciar sesión para poder acceder a
+                    ellos.
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    <Link href="/login">
+                      <Button variant="outline" size="sm">
+                        Iniciar sesión
+                      </Button>
+                    </Link>
+                    <Link href="/registro">
+                      <Button size="sm">Crear cuenta</Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Filtros con explicaciones integradas */}
           {showFilters && (
@@ -468,7 +521,11 @@ export default function RetosPage() {
                       >
                         <Card
                           className={`flex flex-col justify-between w-full h-full border ${
-                            !isPro && !reto.isFreeAccess ? "hover:border-yellow-500" : "hover:border-primary"
+                            !user
+                              ? "hover:border-blue-500"
+                              : !isPro && !reto.isFreeAccess
+                                ? "hover:border-yellow-500"
+                                : "hover:border-primary"
                           }`}
                         >
                           <CardContent className="p-4 flex flex-col h-full">
@@ -504,7 +561,7 @@ export default function RetosPage() {
                                     Diario
                                   </Badge>
                                 )}
-                                {reto.completed && (
+                                {user && reto.completed && (
                                   <Badge className="bg-primary/20 text-primary border-primary/20 flex items-center gap-1 text-xs">
                                     <Trophy className="h-3 w-3" />
                                     Completado
@@ -523,6 +580,56 @@ export default function RetosPage() {
           </Tabs>
         </main>
       </div>
+
+      {/* Modal para usuario no autenticado */}
+      {loginModalVisible && selectedReto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div className="bg-card border border-border rounded-lg max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="p-6 border-b border-border">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  <UserRound className="h-5 w-5 text-blue-500" />
+                  Iniciar sesión requerido
+                </h3>
+                <button
+                  onClick={() => setLoginModalVisible(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                <h4 className="font-semibold mb-2 text-blue-500">{selectedReto.title}</h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Para acceder a este reto, primero debes iniciar sesión o crear una cuenta.
+                </p>
+                <Badge variant="outline" className={`${getDifficultyColor(selectedReto.difficulty)}`}>
+                  {selectedReto.difficulty}
+                </Badge>
+              </div>
+              <p className="text-center text-sm text-muted-foreground">
+                Únete a nuestra comunidad para resolver retos y mejorar tus habilidades de programación.
+              </p>
+            </div>
+            <div className="p-4 border-t border-border flex justify-between">
+              <Button variant="outline" onClick={() => setLoginModalVisible(false)}>
+                Cancelar
+              </Button>
+              <div className="flex gap-2">
+                <Link href="/registro">
+                  <Button variant="outline">Crear cuenta</Button>
+                </Link>
+                <Button onClick={handleGoToLogin}>
+                  <UserRound className="h-4 w-4 mr-2" />
+                  Iniciar sesión
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal para contenido premium */}
       {premiumModalVisible && selectedPremiumReto && (
