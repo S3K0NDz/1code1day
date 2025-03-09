@@ -18,8 +18,8 @@ import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { useAuth } from "@/components/auth-provider"
 import { supabase } from "@/lib/supabase"
-// Importar el componente EmailNotificationToggle
-import { EmailNotificationToggle } from "@/components/email-notification-toggle"
+// Eliminar la importación del componente EmailNotificationToggle
+// Eliminar la línea: import { EmailNotificationToggle } from "@/components/email-notification-toggle"
 
 export default function EditarPerfilPage() {
   const { user, isLoading } = useAuth()
@@ -323,13 +323,11 @@ export default function EditarPerfilPage() {
                         <div>
                           <h4 className="font-medium">Notificaciones por correo</h4>
                           <p className="text-sm text-muted-foreground">
-                            Recibe actualizaciones sobre nuevos retos y logros.
+                            Esta funcionalidad ha sido desactivada. Los administradores enviarán correos importantes
+                            cuando sea necesario.
                           </p>
                         </div>
-                        <Switch
-                          checked={formData.emailNotifications}
-                          onCheckedChange={(checked) => handleSwitchChange("emailNotifications", checked)}
-                        />
+                        <Switch disabled checked={false} />
                       </div>
 
                       <Separator />
@@ -421,9 +419,11 @@ export default function EditarPerfilPage() {
                 </Card>
               </TabsContent>
 
+              {/* Eliminar el componente EmailNotificationToggle del formulario */}
+              {/* Eliminar el bloque:
               <div className="mt-6 mb-4">
                 <EmailNotificationToggle userId={user.id} initialValue={profile?.email_notifications || false} />
-              </div>
+              </div> */}
 
               <div className="flex justify-end gap-4 mt-6">
                 <Link href="/perfil">

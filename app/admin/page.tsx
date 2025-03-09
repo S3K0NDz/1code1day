@@ -5,7 +5,7 @@ import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
-import { Loader2, UserCog, Code, Settings, BarChart, Shield, Users, CreditCard } from "lucide-react"
+import { Loader2, UserCog, Code, Settings, BarChart, Shield, Users, CreditCard, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/components/ui/use-toast"
@@ -63,6 +63,12 @@ export default function AdminPage() {
       description: "Administra y sincroniza las suscripciones de usuarios",
       icon: <CreditCard className="h-8 w-8 text-purple-500" />,
       link: "/admin/suscripciones",
+    },
+    {
+      title: "Envío de Correos",
+      description: "Envía correos personalizados a los usuarios",
+      icon: <Mail className="h-8 w-8 text-yellow-500" />,
+      link: "/admin/correos",
     },
     {
       title: "Estadísticas",
