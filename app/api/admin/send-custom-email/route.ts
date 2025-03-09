@@ -99,23 +99,44 @@ export async function POST(request: Request) {
 
         // Si se incluye el reto diario, reemplazar los marcadores de posición
         if (dailyChallenge && includeDailyChallenge) {
-          const challenge = dailyChallenge.challenge
+          // Verificar que dailyChallenge tiene la estructura esperada
+          if (!dailyChallenge.title) {
+            console.log("Estructura de dailyChallenge:", JSON.stringify(dailyChallenge, null, 2))
+            console.warn("El reto diario no tiene la estructura esperada. Usando valores por defecto.")
 
-          // Reemplazar marcadores de posición con la información real del reto
-          emailContent = emailContent
-            .replace("{{CHALLENGE_TITLE}}", challenge.title || "Reto del día")
-            .replace("{{CHALLENGE_DESCRIPTION}}", challenge.description || "Descripción no disponible")
-            .replace("{{CHALLENGE_DIFFICULTY}}", challenge.difficulty || "Intermedio")
-            .replace("{{CHALLENGE_CATEGORY}}", challenge.category || "Programación")
-            .replace(
-              "{{CHALLENGE_DATE}}",
-              new Date(dailyChallenge.date).toLocaleDateString("es-ES", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              }),
-            )
+            // Usar valores por defecto si no se encuentra la estructura esperada
+            emailContent = emailContent
+              .replace("{{CHALLENGE_TITLE}}", "Reto del día")
+              .replace("{{CHALLENGE_DESCRIPTION}}", "Descripción no disponible")
+              .replace("{{CHALLENGE_DIFFICULTY}}", "Intermedio")
+              .replace("{{CHALLENGE_CATEGORY}}", "Programación")
+              .replace(
+                "{{CHALLENGE_DATE}}",
+                new Date().toLocaleDateString("es-ES", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                }),
+              )
+          } else {
+            // Usar la nueva estructura directamente
+            emailContent = emailContent
+              .replace("{{CHALLENGE_TITLE}}", dailyChallenge.title || "Reto del día")
+              .replace("{{CHALLENGE_DESCRIPTION}}", dailyChallenge.description || "Descripción no disponible")
+              .replace("{{CHALLENGE_DIFFICULTY}}", dailyChallenge.difficulty || "Intermedio")
+              .replace("{{CHALLENGE_CATEGORY}}", dailyChallenge.category || "Programación")
+              .replace(
+                "{{CHALLENGE_DATE}}",
+                dailyChallenge.date ||
+                  new Date().toLocaleDateString("es-ES", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  }),
+              )
+          }
         }
 
         await resend.emails.send({
