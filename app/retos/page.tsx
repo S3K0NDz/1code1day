@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Clock, Filter, Lock, Search, Trophy, X, Tag, BarChart3, Sparkles } from "lucide-react"
+import { Calendar, Clock, Filter, Lock, Search, Trophy, X, Tag, BarChart3, Sparkles, CalendarDays } from "lucide-react"
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { supabase } from "@/lib/supabase"
@@ -24,6 +24,7 @@ export default function RetosPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [difficulty, setDifficulty] = useState("all")
   const [category, setCategory] = useState("all")
+  const [retoType, setRetoType] = useState("all") // Nuevo filtro para tipo de reto (normal/diario)
   const [showFilters, setShowFilters] = useState(false)
   const [categories, setCategories] = useState([])
   const [difficulties, setDifficulties] = useState([])
@@ -38,12 +39,11 @@ export default function RetosPage() {
     const fetchRetos = async () => {
       setIsLoading(true)
       try {
-        // Obtener todos los retos desde Supabase
+        // Obtener todos los retos desde Supabase, incluyendo los retos diarios pasados
         const { data: retosData, error: retosError } = await supabase
           .from("retos")
           .select("*")
           .eq("published", true)
-          .is("daily_date", null) // Excluir retos diarios
           .order("createdat", { ascending: false })
 
         if (retosError) {
@@ -80,14 +80,26 @@ export default function RetosPage() {
             const isFreeAccess =
               reto.free_access !== false && (reto.free_access === true || retosData.indexOf(reto) < 3)
 
+            // Determinar si es un reto diario
+            const isDailyChallenge = reto.daily_date !== null
+
             return {
               ...reto,
               completed: completedIds.includes(reto.id),
               isFreeAccess: isFreeAccess,
+              isDailyChallenge: isDailyChallenge,
               title: String(reto.title || "Sin título"),
               description: String(reto.description || "Sin descripción"),
               difficulty: String(reto.difficulty || "Sin dificultad"),
               category: String(reto.category || "Sin categoría"),
+              // Formatear la fecha del reto diario si existe
+              formattedDailyDate: reto.daily_date
+                ? new Date(reto.daily_date).toLocaleDateString("es-ES", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })
+                : null,
             }
           })
 
@@ -113,7 +125,7 @@ export default function RetosPage() {
   }, [user])
 
   useEffect(() => {
-    // Filtrar retos basados en búsqueda, dificultad y categoría
+    // Filtrar retos basados en búsqueda, dificultad, categoría, tipo y pestaña
     let filtered = [...retos]
 
     if (searchTerm) {
@@ -132,16 +144,22 @@ export default function RetosPage() {
       filtered = filtered.filter((reto) => reto.category === category)
     }
 
+    // Filtrar por tipo de reto (normal o diario)
+    if (retoType !== "all") {
+      filtered = filtered.filter((reto) => (retoType === "daily" ? reto.isDailyChallenge : !reto.isDailyChallenge))
+    }
+
     // Aplicar filtro según la pestaña activa
     filtered = filtered.filter((reto) => (activeTab === "free" ? reto.isFreeAccess : !reto.isFreeAccess))
 
     setFilteredRetos(filtered)
-  }, [searchTerm, difficulty, category, activeTab, retos])
+  }, [searchTerm, difficulty, category, retoType, activeTab, retos])
 
   const clearFilters = () => {
     setSearchTerm("")
     setDifficulty("all")
     setCategory("all")
+    setRetoType("all")
   }
 
   const getDifficultyColor = (difficulty) => {
@@ -204,9 +222,12 @@ export default function RetosPage() {
               <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="relative">
                 <Filter className="h-4 w-4 mr-2" />
                 Filtros
-                {(searchTerm || difficulty !== "all" || category !== "all") && (
+                {(searchTerm || difficulty !== "all" || category !== "all" || retoType !== "all") && (
                   <Badge variant="secondary" className="ml-2">
-                    {(searchTerm ? 1 : 0) + (difficulty !== "all" ? 1 : 0) + (category !== "all" ? 1 : 0)}
+                    {(searchTerm ? 1 : 0) +
+                      (difficulty !== "all" ? 1 : 0) +
+                      (category !== "all" ? 1 : 0) +
+                      (retoType !== "all" ? 1 : 0)}
                   </Badge>
                 )}
               </Button>
@@ -222,7 +243,7 @@ export default function RetosPage() {
           {/* Filtros con explicaciones integradas */}
           {showFilters && (
             <div className="bg-card/50 border border-border rounded-lg p-4 mb-6 animate-in fade-in duration-300">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Filtro de búsqueda */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 mb-1">
@@ -295,6 +316,29 @@ export default function RetosPage() {
                           {cat}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtro de tipo de reto (nuevo) */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CalendarDays className="h-4 w-4 text-primary" />
+                    <label htmlFor="type-select" className="text-sm font-medium">
+                      Tipo de reto
+                    </label>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Filtra entre retos normales o retos diarios de fechas anteriores.
+                  </p>
+                  <Select id="type-select" value={retoType} onValueChange={setRetoType}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Tipo de reto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los tipos</SelectItem>
+                      <SelectItem value="normal">Retos normales</SelectItem>
+                      <SelectItem value="daily">Retos diarios pasados</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -441,10 +485,25 @@ export default function RetosPage() {
 
                             <div className="mt-auto flex items-center justify-between">
                               <div className="flex items-center text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {formatDate(reto.createdat)}
+                                {reto.isDailyChallenge ? (
+                                  <div className="flex items-center">
+                                    <CalendarDays className="h-3 w-3 mr-1" />
+                                    <span>Reto del {reto.formattedDailyDate}</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    {formatDate(reto.createdat)}
+                                  </div>
+                                )}
                               </div>
                               <div className="flex items-center gap-1.5">
+                                {reto.isDailyChallenge && (
+                                  <Badge className="bg-blue-500/20 text-blue-500 border-blue-500/20 flex items-center gap-1 text-xs">
+                                    <Calendar className="h-3 w-3" />
+                                    Diario
+                                  </Badge>
+                                )}
                                 {reto.completed && (
                                   <Badge className="bg-primary/20 text-primary border-primary/20 flex items-center gap-1 text-xs">
                                     <Trophy className="h-3 w-3" />
