@@ -59,7 +59,6 @@
     "eslint": "8.55.0",
     "eslint-config-next": "14.0.3",
     "framer-motion": "latest",
-    "https:": "latest",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "monaco-editor": "latest",
