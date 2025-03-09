@@ -38,37 +38,39 @@ export default function Home() {
   return (
     <InteractiveGridBackground>
       <main className="min-h-screen">
-        <div className="container mx-auto px-4 py-16 max-w-7xl">
+        <div className="container mx-auto px-4 py-8 sm:py-16 max-w-7xl">
           {/* Header */}
-          <header className="flex justify-center mb-16">
+          <header className="flex justify-center mb-8 sm:mb-16">
             <div className="flex items-center">
-              <div className="bg-white text-black px-4 py-2 text-3xl font-bold">1code</div>
-              <div className="text-white text-3xl font-bold px-2">1day</div>
+              <div className="bg-white text-black px-3 py-1 sm:px-4 sm:py-2 text-2xl sm:text-3xl font-bold">1code</div>
+              <div className="text-white text-2xl sm:text-3xl font-bold px-1 sm:px-2">1day</div>
             </div>
           </header>
 
           {/* Hero Section */}
-          <div className="text-center mb-24">
+          <div className="text-center mb-16 sm:mb-24">
             <div className="flex flex-col items-center mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-4xl md:text-5xl font-bold leading-tight">La plataforma de retos diarios</h1>
+              <div className="flex flex-col sm:flex-row items-center gap-3 mb-2 px-4">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight text-center sm:text-left">
+                  La plataforma de retos diarios
+                </h1>
                 <JavaScriptLogo size={56} className="mt-1" />
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-yellow-400">JavaScript</h2>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-yellow-400">JavaScript</h2>
             </div>
-            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
+            <p className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto px-4">
               Mejora tus habilidades de JavaScript con un nuevo desafío cada día. Aprende, practica y crece como
               desarrollador.
             </p>
-            <div className="flex gap-4 justify-center mt-10">
-              <Link href="/reto-diario">
-                <Button size="lg" className="group">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10 px-4">
+              <Link href="/reto-diario" className="w-full sm:w-auto">
+                <Button size="lg" className="group w-full">
                   Comenzar ahora
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition" />
                 </Button>
               </Link>
-              <Link href="/registro">
-                <Button size="lg" variant="outline" className="group">
+              <Link href="/registro" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="group w-full">
                   Registrarse
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition" />
                 </Button>
@@ -77,9 +79,9 @@ export default function Home() {
           </div>
 
           {/* Sección de estadísticas con datos reales - MOVIDA ARRIBA */}
-          <div className="mb-24 py-16 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
-            <div className="max-w-5xl mx-auto px-4 text-center">
-              <h2 className="text-3xl font-bold mb-8">Nuestra biblioteca de retos</h2>
+          <div className="mb-16 sm:mb-24 py-12 sm:py-16 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
+            <div className="max-w-5xl mx-auto text-center">
+              <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Nuestra biblioteca de retos</h2>
 
               {stats.isLoading ? (
                 <div className="flex justify-center items-center py-8">
@@ -87,17 +89,17 @@ export default function Home() {
                   <span className="ml-3 text-lg">Cargando...</span>
                 </div>
               ) : (
-                <div className="py-8">
-                  <div className="text-6xl font-bold text-yellow-400 mb-4">{stats.totalRetos}</div>
-                  <h3 className="text-2xl font-medium mb-3">Retos de JavaScript</h3>
-                  <p className="text-muted-foreground max-w-2xl mx-auto">
+                <div className="py-8 px-4">
+                  <div className="text-5xl sm:text-6xl font-bold text-yellow-400 mb-4">{stats.totalRetos}</div>
+                  <h3 className="text-xl sm:text-2xl font-medium mb-3">Retos de JavaScript</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto px-2">
                     Desde manipulación del DOM hasta algoritmos avanzados y patrones de diseño. Practica con nuestra
                     amplia colección de desafíos para todos los niveles.
                   </p>
 
                   <div className="mt-8">
-                    <Link href="/retos">
-                      <Button size="lg">
+                    <Link href="/retos" className="w-full sm:w-auto inline-block">
+                      <Button size="lg" className="w-full sm:w-auto">
                         Explorar todos los retos
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
@@ -109,19 +111,19 @@ export default function Home() {
           </div>
 
           {/* Pricing Section */}
-          <section className="my-32">
-            <h2 className="text-4xl font-bold text-center mb-6">Planes de Suscripción</h2>
-            <p className="text-center text-muted-foreground mb-16 max-w-3xl mx-auto">
+          <section className="my-16 sm:my-32 px-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 sm:mb-6">Planes de Suscripción</h2>
+            <p className="text-center text-sm sm:text-base text-muted-foreground mb-8 sm:mb-16 max-w-3xl mx-auto">
               Elige el plan que mejor se adapte a tus necesidades para dominar JavaScript
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
               {/* Free Plan */}
-              <div className="border border-border bg-card/50 p-8 rounded-lg hover:border-primary/50 transition-colors duration-300 flex flex-col">
+              <div className="border border-border bg-card/50 p-6 sm:p-8 rounded-lg hover:border-primary/50 transition-colors duration-300 flex flex-col">
                 <div className="flex-grow">
-                  <h3 className="text-2xl font-bold mb-2">Gratis</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold mb-2">Gratis</h3>
                   <p className="text-muted-foreground mb-4">Comienza tu viaje de programación</p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold">€0</span>
+                    <span className="text-3xl sm:text-4xl font-bold">€0</span>
                     <span className="text-muted-foreground">/para siempre</span>
                   </div>
                   <ul className="space-y-3 mb-8">
@@ -143,23 +145,25 @@ export default function Home() {
                     </li>
                   </ul>
                 </div>
-                <Button className="w-full mt-auto">Comenzar Gratis</Button>
+                <Link href="/registro" className="w-full">
+                  <Button className="w-full mt-auto">Comenzar Gratis</Button>
+                </Link>
               </div>
 
               {/* Premium Plan */}
-              <div className="border border-primary bg-card/80 p-8 rounded-lg shadow-lg flex flex-col relative overflow-hidden">
+              <div className="border border-primary bg-card/80 p-6 sm:p-8 rounded-lg shadow-lg flex flex-col relative overflow-hidden">
                 <div className="absolute top-0 right-0">
-                  <div className="bg-blue-600 text-white text-sm font-medium px-4 py-1 rounded-md shadow-md">
+                  <div className="bg-blue-600 text-white text-xs sm:text-sm font-medium px-2 sm:px-4 py-1 rounded-md shadow-md">
                     Recomendado
                   </div>
                 </div>
                 <div className="flex-grow">
-                  <h3 className="text-2xl font-bold mb-2">Premium</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold mb-2">Premium</h3>
                   <p className="text-muted-foreground mb-4">Acceso completo a todas las funciones</p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold">€5</span>
+                    <span className="text-3xl sm:text-4xl font-bold">€5</span>
                     <span className="text-muted-foreground">/mes</span>
-                    <p className="text-sm text-muted-foreground mt-1">o €4/mes facturado anualmente</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">o €4/mes facturado anualmente</p>
                   </div>
                   <ul className="space-y-3 mb-8">
                     <li className="flex items-center">
@@ -192,21 +196,21 @@ export default function Home() {
           </section>
 
           {/* Footer simplificado con logo y redes sociales */}
-          <footer className="mt-24 mb-8 border-t border-border pt-12">
+          <footer className="mt-16 sm:mt-24 mb-8 border-t border-border pt-8 sm:pt-12">
             <div className="flex flex-col items-center justify-center">
               {/* Logo */}
-              <div className="flex items-center mb-8">
-                <div className="bg-white text-black px-3 py-1 text-xl font-bold">1code</div>
-                <div className="text-white text-xl font-bold px-1">1day</div>
+              <div className="flex items-center mb-6 sm:mb-8">
+                <div className="bg-white text-black px-2 py-1 sm:px-3 sm:py-1 text-lg sm:text-xl font-bold">1code</div>
+                <div className="text-white text-lg sm:text-xl font-bold px-1">1day</div>
               </div>
 
               {/* Redes sociales */}
-              <div className="flex space-x-6 mb-8">
+              <div className="flex space-x-4 sm:space-x-6 mb-6 sm:mb-8">
                 <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -221,8 +225,8 @@ export default function Home() {
                 <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -239,8 +243,8 @@ export default function Home() {
                 <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -255,8 +259,8 @@ export default function Home() {
                 <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -273,8 +277,8 @@ export default function Home() {
                 <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -289,7 +293,7 @@ export default function Home() {
               </div>
 
               {/* Copyright */}
-              <div className="text-sm text-muted-foreground">
+              <div className="text-xs sm:text-sm text-muted-foreground">
                 <p>© {new Date().getFullYear()} 1code1day. Todos los derechos reservados.</p>
               </div>
             </div>
