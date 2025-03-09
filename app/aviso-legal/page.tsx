@@ -21,7 +21,7 @@ export default function AvisoLegalPage() {
               </Button>
             </Link>
             <h1 className="text-3xl sm:text-4xl font-bold mb-4">Aviso Legal</h1>
-            <p className="text-muted-foreground">Última actualización: 1 de marzo de 2023</p>
+            <p className="text-muted-foreground">Última actualización: 1 de marzo de 2025</p>
           </div>
 
           <div className="prose prose-invert max-w-none">

@@ -212,7 +212,7 @@ export default function AdminCorreosPage() {
     </p>
     
     <div style="text-align: center; font-size: 14px; color: #9ca3af; margin-top: 30px;">
-      <p>© 2023 1code1day. Todos los derechos reservados.</p>
+      <p>© 2025 1code1day. Todos los derechos reservados.</p>
       <p>Si no deseas recibir más correos, puedes <a href="#" style="color: #60a5fa;">darte de baja</a>.</p>
     </div>
   </div>
@@ -289,7 +289,7 @@ export default function AdminCorreosPage() {
     </div>
     
     <div style="text-align: center; font-size: 14px; color: #9ca3af; margin-top: 30px;">
-      <p>© 2023 1code1day. Todos los derechos reservados.</p>
+      <p>© 2025 1code1day. Todos los derechos reservados.</p>
       <p>Si no deseas recibir más correos, puedes <a href="#" style="color: #60a5fa;">darte de baja</a>.</p>
     </div>
   </div>
@@ -389,7 +389,7 @@ export default function AdminCorreosPage() {
     </p>
     
     <div style="text-align: center; font-size: 14px; color: #9ca3af; margin-top: 30px;">
-      <p>© 2023 1code1day. Todos los derechos reservados.</p>
+      <p>© 2025 1code1day. Todos los derechos reservados.</p>
       <p>Si no deseas recibir más correos, puedes <a href="#" style="color: #60a5fa;">darte de baja</a>.</p>
     </div>
   </div>
