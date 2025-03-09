@@ -30,7 +30,7 @@ export default function NavbarWithUser() {
   }
 
   const handleSettingsClick = () => {
-    router.push("/configuracion")
+    router.push("/perfil/editar")
   }
 
   // Obtener la imagen de avatar y nombre de usuario de los metadatos
@@ -131,9 +131,12 @@ export default function NavbarWithUser() {
             <div className="flex items-center gap-2">
               {/* Implementación alternativa del menú desplegable */}
               <div className="relative group">
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Button
+                  variant="ghost"
+                  className="relative h-8 w-8 rounded-full overflow-hidden ring-offset-background transition-all duration-300 hover:ring-2 hover:ring-primary/30 hover:ring-offset-2"
+                >
                   {isPro && (
-                    <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-yellow-500 border-2 border-background z-10 flex items-center justify-center">
+                    <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 border-2 border-background z-10 flex items-center justify-center shadow-md">
                       <span className="text-[8px] font-bold text-black">PRO</span>
                     </div>
                   )}
@@ -143,42 +146,44 @@ export default function NavbarWithUser() {
                   </Avatar>
                 </Button>
 
-                <div className="absolute right-0 mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out z-50">
-                  <div className="py-1 bg-popover border border-border rounded-md shadow-md">
-                    <div className="px-4 py-2 border-b border-border">
+                <div className="absolute right-0 mt-2 w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-out transform group-hover:translate-y-0 translate-y-1 z-50">
+                  <div className="py-2 bg-popover border border-border/50 rounded-xl shadow-lg overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border/50">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium">{displayName}</p>
                         {isPro && (
-                          <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20">Premium</Badge>
+                          <Badge className="bg-gradient-to-r from-yellow-400/20 to-yellow-600/20 text-yellow-500 border-yellow-500/20 hover:from-yellow-400/30 hover:to-yellow-600/30 transition-colors">
+                            Premium
+                          </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{user.email}</p>
                     </div>
 
-                    <div className="py-1">
+                    <div className="py-1 px-1.5">
                       <button
                         onClick={handleProfileClick}
-                        className="flex w-full items-center px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                        className="flex w-full items-center px-3 py-2.5 text-sm rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-colors duration-200"
                       >
-                        <User className="h-4 w-4 mr-2" />
+                        <User className="h-4 w-4 mr-3 text-muted-foreground" />
                         Mi Perfil
                       </button>
 
                       <button
                         onClick={handleSettingsClick}
-                        className="flex w-full items-center px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                        className="flex w-full items-center px-3 py-2.5 text-sm rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-colors duration-200"
                       >
-                        <Settings className="h-4 w-4 mr-2" />
+                        <Settings className="h-4 w-4 mr-3 text-muted-foreground" />
                         Configuración
                       </button>
                     </div>
 
-                    <div className="border-t border-border py-1">
+                    <div className="border-t border-border/50 py-1 px-1.5 mt-1">
                       <button
                         onClick={handleLogout}
-                        className="flex w-full items-center px-4 py-2 text-sm text-red-500 hover:bg-accent hover:text-red-500"
+                        className="flex w-full items-center px-3 py-2.5 text-sm rounded-lg text-red-500 hover:bg-red-500/10 transition-colors duration-200"
                       >
-                        <LogOut className="h-4 w-4 mr-2" />
+                        <LogOut className="h-4 w-4 mr-3" />
                         Cerrar Sesión
                       </button>
                     </div>

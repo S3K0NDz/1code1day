@@ -445,58 +445,76 @@ export default function PerfilPage() {
                 </div>
 
                 {userStats.monthlyActivity.length > 0 ? (
-                  <div className="mt-6 h-64 relative">
-                    {/* Cuadrícula de fondo */}
+                  <div className="mt-8 h-72 relative">
+                    {/* Líneas de cuadrícula horizontales */}
                     <div className="absolute inset-0 flex flex-col justify-between">
-                      {gridLines.map((line, i) => (
-                        <div key={i} className="w-full border-t border-border/30 flex items-center">
-                          <span className="text-xs text-muted-foreground mr-2">{maxCount - line}</span>
-                        </div>
-                      ))}
+                      {Array.from({ length: 5 }, (_, i) => {
+                        const value = Math.ceil((maxCount / 4) * (4 - i))
+                        return (
+                          <div key={i} className="w-full border-t border-border/30 flex items-center h-0">
+                            <span className="text-xs text-muted-foreground mr-2 -mt-2">{value}</span>
+                          </div>
+                        )
+                      })}
                     </div>
 
-                    {/* Eje Y */}
-                    <div className="absolute left-0 top-0 h-full flex flex-col justify-between">
-                      <div className="text-xs text-muted-foreground">Retos</div>
-                    </div>
-
-                    {/* Gráfico de barras */}
-                    <div className="absolute inset-0 pt-6 pl-10 flex items-end">
-                      <div className="w-full h-[calc(100%-20px)] flex items-end">
+                    {/* Gráfico de barras mejorado */}
+                    <div className="absolute inset-0 pt-6 pl-8 flex items-end">
+                      <div className="w-full h-[calc(100%-40px)] flex items-end">
                         {userStats.monthlyActivity.map((day, index) => {
-                          // Verificar si es hoy
                           const isToday = isSameDay(day.date, new Date())
                           const barHeight = day.count > 0 ? (day.count / maxCount) * 100 : 0
+                          const dayName = format(day.date, "EEE", { locale: es })
+                          const dayNumber = format(day.date, "d")
 
-                          // Usar solo 7 días (una semana) para tener barras más gruesas
-                          // o todos los días (14) para barras más delgadas basado en la preferencia
-                          // Aquí usamos todos para que sean más gruesas
-                          const showDay = true // Mostrar todos los días
-
-                          if (showDay) {
-                            return (
-                              <div
-                                key={index}
-                                className="flex flex-col items-center px-[1px]"
-                                style={{ width: `${100 / userStats.monthlyActivity.length}%` }}
-                              >
-                                {/* Número de retos encima de la barra */}
-                                {day.count > 0 && <div className="text-xs text-muted-foreground mb-1">{day.count}</div>}
-
-                                {/* Barra - ahora más ancha */}
-                                <div
-                                  className={`w-full ${isToday ? "bg-blue-500/80" : "bg-primary/80"} rounded-t-sm`}
-                                  style={{ height: `${barHeight}%`, minHeight: day.count ? "4px" : "0" }}
-                                ></div>
-
-                                {/* Fecha debajo de la barra - ahora rotada para mejor visibilidad */}
-                                <div className="text-xs text-muted-foreground mt-2 transform -rotate-45 origin-top-left h-10 overflow-hidden">
-                                  {format(day.date, index % 2 === 0 ? "dd MMM" : "dd", { locale: es })}
+                          return (
+                            <div
+                              key={index}
+                              className="flex flex-col items-center group"
+                              style={{ width: `${100 / userStats.monthlyActivity.length}%` }}
+                            >
+                              {/* Tooltip al pasar el cursor */}
+                              <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                                <div className="bg-popover text-popover-foreground text-xs rounded-md shadow-md p-2 transform -translate-x-1/2">
+                                  <p className="font-medium">{format(day.date, "d 'de' MMMM", { locale: es })}</p>
+                                  <p>
+                                    {day.count} {day.count === 1 ? "reto" : "retos"}
+                                  </p>
                                 </div>
                               </div>
-                            )
-                          }
-                          return null
+
+                              {/* Barra con animación y estilo mejorado */}
+                              <div
+                                className={`w-[60%] rounded-t-md transition-all duration-500 ease-out ${
+                                  isToday
+                                    ? "bg-gradient-to-t from-blue-500 to-blue-400"
+                                    : "bg-gradient-to-t from-primary to-primary/80"
+                                } relative group-hover:w-[80%]`}
+                                style={{
+                                  height: `${barHeight}%`,
+                                  minHeight: day.count ? "4px" : "0",
+                                  boxShadow: day.count ? "0 3px 10px rgba(0,0,0,0.1)" : "none",
+                                }}
+                              >
+                                {/* Número de retos encima de la barra */}
+                                {day.count > 0 && (
+                                  <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-medium">
+                                    {day.count}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Fecha debajo de la barra */}
+                              <div
+                                className={`text-xs mt-2 flex flex-col items-center ${
+                                  isToday ? "font-medium text-primary" : "text-muted-foreground"
+                                }`}
+                              >
+                                <span className="uppercase">{dayName}</span>
+                                <span>{dayNumber}</span>
+                              </div>
+                            </div>
+                          )
                         })}
                       </div>
                     </div>
