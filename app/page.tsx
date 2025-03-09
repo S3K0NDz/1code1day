@@ -52,7 +52,7 @@ export default function Home() {
             <div className="flex flex-col items-center mb-6">
               <div className="flex flex-col sm:flex-row items-center gap-3 mb-2 px-4">
                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight text-center sm:text-left">
-                  La plataforma de retos diarios
+                  La plataforma de retos diarios de programación
                 </h1>
                 <JavaScriptLogo size={56} className="mt-1" />
               </div>
