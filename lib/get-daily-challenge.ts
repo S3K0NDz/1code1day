@@ -61,7 +61,7 @@ export async function getDailyChallenge() {
         testCases = []
       }
 
-      // Devolver los datos del reto
+      // Devolver los datos del reto con la estructura plana (sin anidamiento)
       return {
         id: dailyReto.id,
         title: dailyReto.title,
@@ -83,10 +83,34 @@ export async function getDailyChallenge() {
       }
     }
 
-    return null
+    // Si no hay reto para hoy, devolver un objeto con valores por defecto
+    return {
+      id: "no-challenge",
+      title: "Reto del día",
+      description: "No hay un reto programado para hoy.",
+      difficulty: "Intermedio",
+      category: "Programación",
+      date: new Date().toLocaleDateString("es-ES", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    }
   } catch (error) {
     console.error("Error al obtener el reto diario:", error)
-    return null
+    // En caso de error, devolver un objeto con valores por defecto
+    return {
+      id: "error",
+      title: "Reto del día",
+      description: "Error al cargar el reto diario.",
+      difficulty: "Intermedio",
+      category: "Programación",
+      date: new Date().toLocaleDateString("es-ES", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    }
   }
 }
 
