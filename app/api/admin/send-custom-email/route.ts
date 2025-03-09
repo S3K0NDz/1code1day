@@ -1,132 +1,148 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { verifyAdminToken } from "@/lib/admin-auth"
+import { getDailyChallenge } from "@/lib/get-daily-challenge"
 import { Resend } from "resend"
 
 // Inicializar Resend para enviar correos
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-// Crear cliente de Supabase con la clave de servicio para operaciones administrativas
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-})
+// Cliente de Supabase con la clave de servicio para operaciones administrativas
+const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 export async function POST(request: Request) {
   try {
-    // Verificar que el usuario es administrador
-    const requestUrl = new URL(request.url)
-    const requestHeaders = new Headers(request.headers)
-    const cookies = requestHeaders.get("cookie")
+    // Obtener datos de la solicitud
+    const { token, subject, content, recipientType, selectedUsers, includeUnsubscribed, includeDailyChallenge } =
+      await request.json()
 
-    // Crear cliente de Supabase con la cookie para verificar la sesión
-    const supabaseClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: true,
-          detectSessionInUrl: false,
-        },
-        global: {
-          headers: {
-            cookie: cookies,
-          },
-        },
-      },
-    )
+    // Verificar si el token pertenece a un administrador
+    const isAdmin = await verifyAdminToken(token)
 
-    // Obtener la sesión del usuario
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabaseClient.auth.getSession()
-
-    if (sessionError || !session) {
-      return NextResponse.json({ error: "No autorizado. Debes iniciar sesión." }, { status: 401 })
-    }
-
-    // Verificar si el usuario es administrador
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", session.user.id)
-      .single()
-
-    if (userError || !userData || !userData.is_admin) {
+    if (!isAdmin) {
       return NextResponse.json({ error: "No autorizado. No tienes permisos de administrador." }, { status: 403 })
     }
 
-    // Obtener los datos del cuerpo de la solicitud
-    const { subject, content, recipientType, selectedUsers, includeUnsubscribed } = await request.json()
-
-    // Validar los datos
-    if (!subject || !content) {
-      return NextResponse.json({ error: "El asunto y el contenido son obligatorios" }, { status: 400 })
+    // Obtener el reto diario si se solicita
+    let dailyChallenge = null
+    if (includeDailyChallenge) {
+      dailyChallenge = await getDailyChallenge()
+      if (!dailyChallenge) {
+        return NextResponse.json({ error: "No se pudo obtener la información del reto diario." }, { status: 500 })
+      }
     }
 
-    if (recipientType === "specific" && (!selectedUsers || selectedUsers.length === 0)) {
-      return NextResponse.json({ error: "Debes seleccionar al menos un usuario" }, { status: 400 })
+    // Obtener usuarios según el tipo de destinatario
+    let users = []
+
+    if (recipientType === "specific") {
+      // Obtener usuarios específicos
+      const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers()
+
+      if (authError) {
+        console.error("Error al obtener usuarios:", authError)
+        return NextResponse.json({ error: "Error al obtener la lista de usuarios" }, { status: 500 })
+      }
+
+      users = authUsers.users.filter((user) => selectedUsers.includes(user.id))
+    } else {
+      // Obtener todos los usuarios
+      const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers()
+
+      if (authError) {
+        console.error("Error al obtener usuarios:", authError)
+        return NextResponse.json({ error: "Error al obtener la lista de usuarios" }, { status: 500 })
+      }
+
+      // Obtener información adicional de los perfiles
+      const { data: profiles, error: profilesError } = await supabaseAdmin
+        .from("profiles")
+        .select("id, email_notifications")
+
+      if (profilesError) {
+        console.error("Error al obtener perfiles:", profilesError)
+        return NextResponse.json({ error: "Error al obtener la información de perfiles" }, { status: 500 })
+      }
+
+      // Filtrar usuarios según el tipo de destinatario
+      users = authUsers.users.filter((user) => {
+        const profile = profiles.find((p) => p.id === user.id) || {}
+
+        // Si no se incluyen los usuarios que han desactivado las notificaciones
+        if (!includeUnsubscribed && profile.email_notifications === false) {
+          return false
+        }
+
+        // Filtrar por tipo de usuario
+        if (recipientType === "premium") {
+          // Verificar si el usuario tiene una suscripción activa
+          // Nota: Esto depende de cómo se almacena la información de suscripción en tu base de datos
+          return user.user_metadata?.is_subscribed === true
+        } else if (recipientType === "free") {
+          // Verificar si el usuario no tiene una suscripción activa
+          return user.user_metadata?.is_subscribed !== true
+        }
+
+        // Para "all", incluir todos los usuarios
+        return true
+      })
     }
 
-    // Obtener los usuarios según el tipo de destinatario
-    let usersQuery = supabaseAdmin.from("profiles").select("id, email, email_notifications")
+    // Enviar correos
+    let sentCount = 0
+    const errors = []
 
-    if (recipientType === "premium") {
-      usersQuery = usersQuery.eq("is_subscribed", true)
-    } else if (recipientType === "free") {
-      usersQuery = usersQuery.eq("is_subscribed", false)
-    } else if (recipientType === "specific") {
-      usersQuery = usersQuery.in("id", selectedUsers)
-    }
-
-    // Si no se incluyen los usuarios que han desactivado las notificaciones
-    if (!includeUnsubscribed) {
-      usersQuery = usersQuery.eq("email_notifications", true)
-    }
-
-    const { data: users, error: usersError } = await usersQuery
-
-    if (usersError) {
-      console.error("Error al obtener usuarios:", usersError)
-      return NextResponse.json({ error: "Error al obtener los usuarios" }, { status: 500 })
-    }
-
-    if (!users || users.length === 0) {
-      return NextResponse.json(
-        { error: "No hay usuarios que cumplan con los criterios seleccionados" },
-        { status: 400 },
-      )
-    }
-
-    // Enviar correos a los usuarios
-    const emailPromises = users.map(async (user) => {
+    for (const user of users) {
       try {
+        // Personalizar el contenido del correo si es necesario
+        let emailContent = content
+
+        // Si se incluye el reto diario, reemplazar los marcadores de posición
+        if (dailyChallenge && includeDailyChallenge) {
+          const challenge = dailyChallenge.challenge
+
+          // Reemplazar marcadores de posición con la información real del reto
+          emailContent = emailContent
+            .replace("{{CHALLENGE_TITLE}}", challenge.title || "Reto del día")
+            .replace("{{CHALLENGE_DESCRIPTION}}", challenge.description || "Descripción no disponible")
+            .replace("{{CHALLENGE_DIFFICULTY}}", challenge.difficulty || "Intermedio")
+            .replace("{{CHALLENGE_CATEGORY}}", challenge.category || "Programación")
+            .replace(
+              "{{CHALLENGE_DATE}}",
+              new Date(dailyChallenge.date).toLocaleDateString("es-ES", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              }),
+            )
+        }
+
         await resend.emails.send({
-          from: "1Code1Day <noreply@1code1day.com>",
+          from: "1Code1Day <no-reply@1code1day.app>",
           to: user.email,
           subject: subject,
-          html: content,
+          html: emailContent,
         })
-        return { success: true, userId: user.id }
+
+        sentCount++
       } catch (error) {
         console.error(`Error al enviar correo a ${user.email}:`, error)
-        return { success: false, userId: user.id, error }
+        errors.push({
+          email: user.email,
+          error: error.message || "Error desconocido",
+        })
       }
-    })
-
-    const emailResults = await Promise.all(emailPromises)
-    const successfulEmails = emailResults.filter((result) => result.success)
+    }
 
     return NextResponse.json({
       success: true,
-      sentCount: successfulEmails.length,
-      totalCount: users.length,
+      sentCount,
+      totalUsers: users.length,
+      errors: errors.length > 0 ? errors : undefined,
     })
   } catch (error) {
-    console.error("Error en el envío de correos:", error)
+    console.error("Error al enviar correos:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
