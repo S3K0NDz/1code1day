@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Calendar, Clock, Filter, Lock, Search, Trophy, X } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Calendar, Clock, Filter, Lock, Search, Trophy, X, Tag, BarChart3, Sparkles } from "lucide-react"
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { supabase } from "@/lib/supabase"
@@ -23,13 +24,13 @@ export default function RetosPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [difficulty, setDifficulty] = useState("all")
   const [category, setCategory] = useState("all")
-  const [accessFilter, setAccessFilter] = useState("all") // Filtro para gratuitos/premium
   const [showFilters, setShowFilters] = useState(false)
   const [categories, setCategories] = useState([])
   const [difficulties, setDifficulties] = useState([])
   const [completedChallenges, setCompletedChallenges] = useState([])
   const [premiumModalVisible, setPremiumModalVisible] = useState(false)
   const [selectedPremiumReto, setSelectedPremiumReto] = useState(null)
+  const [activeTab, setActiveTab] = useState("free")
   const { user, isPro } = useAuth()
   const router = useRouter()
 
@@ -112,7 +113,7 @@ export default function RetosPage() {
   }, [user])
 
   useEffect(() => {
-    // Filtrar retos basados en búsqueda, dificultad, categoría y acceso
+    // Filtrar retos basados en búsqueda, dificultad y categoría
     let filtered = [...retos]
 
     if (searchTerm) {
@@ -131,19 +132,16 @@ export default function RetosPage() {
       filtered = filtered.filter((reto) => reto.category === category)
     }
 
-    // Filtrar por tipo de acceso (gratuito/premium)
-    if (accessFilter !== "all") {
-      filtered = filtered.filter((reto) => (accessFilter === "free" ? reto.isFreeAccess : !reto.isFreeAccess))
-    }
+    // Aplicar filtro según la pestaña activa
+    filtered = filtered.filter((reto) => (activeTab === "free" ? reto.isFreeAccess : !reto.isFreeAccess))
 
     setFilteredRetos(filtered)
-  }, [searchTerm, difficulty, category, accessFilter, retos])
+  }, [searchTerm, difficulty, category, activeTab, retos])
 
   const clearFilters = () => {
     setSearchTerm("")
     setDifficulty("all")
     setCategory("all")
-    setAccessFilter("all")
   }
 
   const getDifficultyColor = (difficulty) => {
@@ -197,21 +195,18 @@ export default function RetosPage() {
         <main className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Retos anteriores</h1>
+              <h1 className="text-3xl font-bold mb-2">Biblioteca de retos</h1>
               <p className="text-muted-foreground">
                 Explora y practica con todos nuestros retos anteriores para mejorar tus habilidades
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
+              <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="relative">
                 <Filter className="h-4 w-4 mr-2" />
                 Filtros
-                {(searchTerm || difficulty !== "all" || category !== "all" || accessFilter !== "all") && (
+                {(searchTerm || difficulty !== "all" || category !== "all") && (
                   <Badge variant="secondary" className="ml-2">
-                    {(searchTerm ? 1 : 0) +
-                      (difficulty !== "all" ? 1 : 0) +
-                      (category !== "all" ? 1 : 0) +
-                      (accessFilter !== "all" ? 1 : 0)}
+                    {(searchTerm ? 1 : 0) + (difficulty !== "all" ? 1 : 0) + (category !== "all" ? 1 : 0)}
                   </Badge>
                 )}
               </Button>
@@ -224,13 +219,25 @@ export default function RetosPage() {
             </div>
           </div>
 
+          {/* Filtros con explicaciones integradas */}
           {showFilters && (
-            <div className="bg-card/50 border border-border rounded-lg p-4 mb-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
+            <div className="bg-card/50 border border-border rounded-lg p-4 mb-6 animate-in fade-in duration-300">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Filtro de búsqueda */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Search className="h-4 w-4 text-primary" />
+                    <label htmlFor="search-input" className="text-sm font-medium">
+                      Búsqueda
+                    </label>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Busca retos por título o descripción para encontrar exactamente lo que necesitas.
+                  </p>
                   <div className="relative">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
+                      id="search-input"
                       type="text"
                       placeholder="Buscar retos..."
                       className="pl-8"
@@ -239,9 +246,20 @@ export default function RetosPage() {
                     />
                   </div>
                 </div>
-                <div className="flex flex-1 flex-col sm:flex-row gap-4">
-                  <Select value={difficulty} onValueChange={setDifficulty}>
-                    <SelectTrigger className="flex-1">
+
+                {/* Filtro de dificultad */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <BarChart3 className="h-4 w-4 text-primary" />
+                    <label htmlFor="difficulty-select" className="text-sm font-medium">
+                      Dificultad
+                    </label>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Filtra por nivel de dificultad para encontrar retos adaptados a tu nivel de habilidad.
+                  </p>
+                  <Select id="difficulty-select" value={difficulty} onValueChange={setDifficulty}>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Dificultad" />
                     </SelectTrigger>
                     <SelectContent>
@@ -253,8 +271,21 @@ export default function RetosPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="flex-1">
+                </div>
+
+                {/* Filtro de categoría */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Tag className="h-4 w-4 text-primary" />
+                    <label htmlFor="category-select" className="text-sm font-medium">
+                      Categoría
+                    </label>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Selecciona una categoría específica para practicar habilidades concretas.
+                  </p>
+                  <Select id="category-select" value={category} onValueChange={setCategory}>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Categoría" />
                     </SelectTrigger>
                     <SelectContent>
@@ -266,109 +297,171 @@ export default function RetosPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {/* Filtro de acceso (gratuito/premium) */}
-                  <Select value={accessFilter} onValueChange={setAccessFilter}>
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Tipo de acceso" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los retos</SelectItem>
-                      <SelectItem value="free">Retos gratuitos</SelectItem>
-                      <SelectItem value="premium">Retos premium</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
-                <Button variant="ghost" size="icon" onClick={clearFilters} className="shrink-0">
-                  <X className="h-4 w-4" />
+              </div>
+
+              <div className="flex justify-end mt-4">
+                <Button variant="outline" size="sm" onClick={clearFilters} className="flex items-center gap-1.5">
+                  <X className="h-3.5 w-3.5" />
+                  Limpiar filtros
                 </Button>
               </div>
             </div>
           )}
 
-          {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, index) => (
-                <div key={index} className="h-[220px] border border-border rounded-lg p-4 animate-pulse">
-                  <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
-                  <div className="h-20 bg-muted rounded mb-4"></div>
-                  <div className="flex justify-between items-center">
-                    <div className="h-4 bg-muted rounded w-1/3"></div>
-                    <div className="h-6 bg-muted rounded w-1/4"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              {filteredRetos.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-                    <Search className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <h2 className="text-xl font-semibold mb-2">No se encontraron retos</h2>
-                  <p className="text-muted-foreground mb-4">
-                    No hay retos que coincidan con tus criterios de búsqueda.
-                  </p>
-                  <Button onClick={clearFilters}>Limpiar filtros</Button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredRetos.map((reto) => (
-                    <div
-                      key={reto.id}
-                      className="h-[220px] cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md"
-                      onClick={() => handleRetoClick(reto)}
-                    >
-                      <Card
-                        className={`flex flex-col justify-between w-full h-full border ${
-                          !isPro && !reto.isFreeAccess ? "hover:border-yellow-500" : "hover:border-primary"
-                        }`}
-                      >
-                        <CardContent className="p-4 flex flex-col h-full">
-                          <div className="flex items-start justify-between mb-2">
-                            <h3 className="font-semibold line-clamp-2">{reto.title}</h3>
-                            <Badge variant="outline" className={`${getDifficultyColor(reto.difficulty)} ml-2 shrink-0`}>
-                              {reto.difficulty}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-3 mb-2">{reto.description}</p>
+          {/* Pestañas para separar retos gratuitos y premium */}
+          <Tabs defaultValue="free" value={activeTab} onValueChange={setActiveTab} className="mb-6">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="free" className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                Retos gratuitos
+              </TabsTrigger>
+              <TabsTrigger value="premium" className="flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                Retos premium
+                {!isPro && (
+                  <Badge variant="outline" className="ml-2 bg-yellow-500/20 text-yellow-500 border-yellow-500/20">
+                    Actualiza
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-                          <div className="mt-auto flex items-center justify-between">
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {formatDate(reto.createdat)}
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              {/* Indicador de Premium o Gratuito */}
-                              {!isPro &&
-                                (reto.isFreeAccess ? (
-                                  <Badge className="bg-green-500/20 text-green-500 border-green-500/20 text-xs">
-                                    Gratuito
-                                  </Badge>
-                                ) : (
-                                  <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1 text-xs">
-                                    <Lock className="h-3 w-3" />
-                                    Premium
-                                  </Badge>
-                                ))}
-
-                              {reto.completed && (
-                                <Badge className="bg-primary/20 text-primary border-primary/20 flex items-center gap-1 text-xs">
-                                  <Trophy className="h-3 w-3" />
-                                  Completado
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+            {/* Contenido de las pestañas */}
+            <TabsContent value="free" className="mt-0">
+              {!isPro && (
+                <div className="mb-6 p-4 border border-green-500/30 bg-green-500/5 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-green-500/20 p-2 rounded-full">
+                      <Sparkles className="h-5 w-5 text-green-500" />
                     </div>
-                  ))}
+                    <div>
+                      <h3 className="font-medium mb-1">Retos gratuitos disponibles</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Estos retos están disponibles para todos los usuarios. Practica con ellos y mejora tus
+                        habilidades.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
-            </>
-          )}
+            </TabsContent>
+
+            <TabsContent value="premium" className="mt-0">
+              {!isPro ? (
+                <div className="mb-6 p-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-yellow-500/20 p-2 rounded-full">
+                      <Trophy className="h-5 w-5 text-yellow-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-1">Contenido Premium</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Actualiza a Premium para acceder a todos estos retos y desbloquear funcionalidades exclusivas.
+                      </p>
+                      <div className="mt-2">
+                        <Link href="/planes">
+                          <Button variant="outline" size="sm">
+                            Ver planes Premium
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-6 p-4 border border-primary/30 bg-primary/5 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-primary/20 p-2 rounded-full">
+                      <Trophy className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-1">Tu acceso Premium</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Disfruta de acceso completo a todos nuestros retos premium. ¡Gracias por tu apoyo!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Lista de retos (común para ambas pestañas) */}
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[...Array(8)].map((_, index) => (
+                  <div key={index} className="h-[220px] border border-border rounded-lg p-4 animate-pulse">
+                    <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
+                    <div className="h-20 bg-muted rounded mb-4"></div>
+                    <div className="flex justify-between items-center">
+                      <div className="h-4 bg-muted rounded w-1/3"></div>
+                      <div className="h-6 bg-muted rounded w-1/4"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                {filteredRetos.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+                      <Search className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h2 className="text-xl font-semibold mb-2">No se encontraron retos</h2>
+                    <p className="text-muted-foreground mb-4">
+                      No hay retos que coincidan con tus criterios de búsqueda.
+                    </p>
+                    <Button onClick={clearFilters}>Limpiar filtros</Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {filteredRetos.map((reto) => (
+                      <div
+                        key={reto.id}
+                        className="h-[220px] cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md"
+                        onClick={() => handleRetoClick(reto)}
+                      >
+                        <Card
+                          className={`flex flex-col justify-between w-full h-full border ${
+                            !isPro && !reto.isFreeAccess ? "hover:border-yellow-500" : "hover:border-primary"
+                          }`}
+                        >
+                          <CardContent className="p-4 flex flex-col h-full">
+                            <div className="flex items-start justify-between mb-2">
+                              <h3 className="font-semibold line-clamp-2">{reto.title}</h3>
+                              <Badge
+                                variant="outline"
+                                className={`${getDifficultyColor(reto.difficulty)} ml-2 shrink-0`}
+                              >
+                                {reto.difficulty}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-3 mb-2">{reto.description}</p>
+
+                            <div className="mt-auto flex items-center justify-between">
+                              <div className="flex items-center text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {formatDate(reto.createdat)}
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                {reto.completed && (
+                                  <Badge className="bg-primary/20 text-primary border-primary/20 flex items-center gap-1 text-xs">
+                                    <Trophy className="h-3 w-3" />
+                                    Completado
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </Tabs>
         </main>
       </div>
 
