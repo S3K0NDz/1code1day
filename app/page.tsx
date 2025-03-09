@@ -1,9 +1,40 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Loader2 } from "lucide-react"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
+import { JavaScriptLogo } from "@/components/javascript-logo"
+import { supabase } from "@/lib/supabase"
 
 export default function Home() {
+  const [stats, setStats] = useState({
+    totalRetos: 0,
+    isLoading: true,
+  })
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        // Obtener el conteo de retos publicados
+        const { count, error } = await supabase.from("retos").select("id", { count: "exact" }).eq("published", true)
+
+        if (error) throw error
+
+        setStats({
+          totalRetos: count || 0,
+          isLoading: false,
+        })
+      } catch (error) {
+        console.error("Error al obtener estadísticas:", error)
+        setStats((prev) => ({ ...prev, isLoading: false }))
+      }
+    }
+
+    fetchStats()
+  }, [])
+
   return (
     <InteractiveGridBackground>
       <main className="min-h-screen">
@@ -16,13 +47,17 @@ export default function Home() {
             </div>
           </header>
 
-          {/* Hero Section - Ligeramente mejorado pero manteniendo el minimalismo */}
+          {/* Hero Section */}
           <div className="text-center mb-24">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 max-w-3xl mx-auto leading-tight">
-              La plataforma de retos de programación diarios
-            </h1>
+            <div className="flex flex-col items-center mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight">La plataforma de retos diarios</h1>
+                <JavaScriptLogo size={56} className="mt-1" />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-yellow-400">JavaScript</h2>
+            </div>
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-              Mejora tus habilidades de programación con un nuevo desafío cada día. Aprende, practica y crece como
+              Mejora tus habilidades de JavaScript con un nuevo desafío cada día. Aprende, practica y crece como
               desarrollador.
             </p>
             <div className="flex gap-4 justify-center mt-10">
@@ -41,11 +76,43 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Pricing Section - Manteniendo el estilo minimalista */}
+          {/* Sección de estadísticas con datos reales - MOVIDA ARRIBA */}
+          <div className="mb-24 py-16 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
+            <div className="max-w-5xl mx-auto px-4 text-center">
+              <h2 className="text-3xl font-bold mb-8">Nuestra biblioteca de retos</h2>
+
+              {stats.isLoading ? (
+                <div className="flex justify-center items-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-yellow-400" />
+                  <span className="ml-3 text-lg">Cargando...</span>
+                </div>
+              ) : (
+                <div className="py-8">
+                  <div className="text-6xl font-bold text-yellow-400 mb-4">{stats.totalRetos}</div>
+                  <h3 className="text-2xl font-medium mb-3">Retos de JavaScript</h3>
+                  <p className="text-muted-foreground max-w-2xl mx-auto">
+                    Desde manipulación del DOM hasta algoritmos avanzados y patrones de diseño. Practica con nuestra
+                    amplia colección de desafíos para todos los niveles.
+                  </p>
+
+                  <div className="mt-8">
+                    <Link href="/retos">
+                      <Button size="lg">
+                        Explorar todos los retos
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Pricing Section */}
           <section className="my-32">
             <h2 className="text-4xl font-bold text-center mb-6">Planes de Suscripción</h2>
             <p className="text-center text-muted-foreground mb-16 max-w-3xl mx-auto">
-              Elige el plan que mejor se adapte a tus necesidades de aprendizaje
+              Elige el plan que mejor se adapte a tus necesidades para dominar JavaScript
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               {/* Free Plan */}
