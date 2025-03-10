@@ -434,7 +434,7 @@ export default function RetosPage() {
               <TabsList className="grid w-full max-w-md grid-cols-2">
                 <TabsTrigger value="free" className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4" />
-                  Retos gratuitos
+                  Retos gratis
                 </TabsTrigger>
                 <TabsTrigger value="premium" className="flex items-center gap-2">
                   <Lock className="h-4 w-4" />
