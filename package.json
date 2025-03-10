@@ -62,6 +62,7 @@
     "@supabase/supabase-js": "latest",
     "monaco-editor": "latest",
     "@emotion/is-prop-valid": "latest",
+    "resend": "latest",
     "stripe": "latest",
     "@ai-sdk/openai": "latest",
     "ai": "latest",
@@ -70,7 +71,7 @@
     "@stripe/stripe-js": "latest",
     "@monaco-editor/react": "latest",
     "framer-motion": "latest",
-    "resend": "latest"
+    "https:": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

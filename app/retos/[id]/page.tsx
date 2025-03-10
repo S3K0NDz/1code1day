@@ -20,10 +20,12 @@ import {
   Linkedin,
   Download,
   Lock,
+  Terminal,
+  Code,
+  BookOpen,
 } from "lucide-react"
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CodeOutput } from "@/components/code-output"
 import KeyboardHandler from "./keyboard-handler"
 import ClipboardHelper from "./clipboard-helper"
@@ -33,10 +35,14 @@ import { supabase } from "@/utils/supabaseClient"
 import { useAuth } from "@/components/auth-provider"
 import { saveCompletedChallenge, toggleSavedChallenge } from "@/lib/db-functions"
 import PremiumContentLock from "@/components/premium-content-lock"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useMediaQuery } from "@/hooks/use-mobile"
 
 export default function RetoPage() {
+  // State and hooks remain the same
   const params = useParams()
   const id = params?.id as string
+  const isMobile = useMediaQuery("(max-width: 768px)")
 
   const [isLoading, setIsLoading] = useState(true)
   const [reto, setReto] = useState<any>(null)
@@ -52,14 +58,17 @@ export default function RetoPage() {
   const [isSaved, setIsSaved] = useState(false)
   const { user, isPro, isLoading: authLoading } = useAuth()
   const router = useRouter()
-  // Añadir estado para controlar si el reto es de acceso gratuito
   const [isFreeAccess, setIsFreeAccess] = useState(false)
+  const [functionName, setFunctionName] = useState("")
+  const [fileName, setFileName] = useState("")
+  const [showHints, setShowHints] = useState(false)
+  const [activeTab, setActiveTab] = useState("description")
 
+  // All useEffect hooks and functions remain the same
   useEffect(() => {
     const fetchReto = async () => {
       setIsLoading(true)
       try {
-        // Buscar donde se obtiene el reto y añadir el campo free_access
         const { data, error } = await supabase
           .from("retos")
           .select("*, user_challenges(*)")
@@ -94,11 +103,25 @@ export default function RetoPage() {
             testCases = []
           }
 
-          // Determinar si el reto es de acceso gratuito
-          // En producción, esto vendría de un campo en la base de datos
-          // Por ahora, usaremos una lógica simple basada en el ID
           const freeAccess = data.free_access === true || Number.parseInt(data.id) % 5 === 0
           setIsFreeAccess(freeAccess)
+
+          let extractedFunctionName = ""
+          try {
+            const functionMatch = data.initialcode?.match(/function\s+([a-zA-Z0-9_]+)\s*\(/i)
+            if (functionMatch && functionMatch[1]) {
+              extractedFunctionName = functionMatch[1]
+            }
+          } catch (e) {
+            console.error("Error extracting function name:", e)
+          }
+
+          const generatedFileName = extractedFunctionName
+            ? `${extractedFunctionName}.js`
+            : `${data.title?.toLowerCase().replace(/\s+/g, "-")}.js`
+
+          setFunctionName(extractedFunctionName)
+          setFileName(generatedFileName)
 
           setReto({
             id: data.id,
@@ -116,7 +139,6 @@ export default function RetoPage() {
           setCode(data.initialcode)
           setRemainingTime((data.timelimit || 45) * 60)
 
-          // Fetch user data if needed
           if (user) {
             try {
               const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).single()
@@ -146,7 +168,6 @@ export default function RetoPage() {
     fetchReto()
   }, [id, user])
 
-  // Verificar si el usuario puede acceder al reto
   useEffect(() => {
     if (!authLoading && !isLoading && !isPro && !isFreeAccess) {
       toast({
@@ -162,7 +183,6 @@ export default function RetoPage() {
     }
   }, [authLoading, isPro, isLoading, isFreeAccess, router])
 
-  // Verificar si el reto está guardado
   useEffect(() => {
     const checkIfSaved = async () => {
       if (user && reto) {
@@ -183,6 +203,34 @@ export default function RetoPage() {
 
     checkIfSaved()
   }, [user, reto])
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (editorRef.current) {
+        editorRef.current.layout()
+      }
+    }
+
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
+
+  useEffect(() => {
+    if (!editorRef.current) return
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (editorRef.current) {
+        editorRef.current.layout()
+      }
+    })
+
+    const editorElement = document.querySelector(".monaco-editor")
+    if (editorElement) {
+      resizeObserver.observe(editorElement)
+    }
+
+    return () => resizeObserver.disconnect()
+  }, [editorRef.current])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -208,27 +256,19 @@ export default function RetoPage() {
       let consoleOutput = ""
       const originalConsoleLog = console.log
 
-      // Capturar la salida de console.log
       console.log = (...args) => {
         consoleOutput += args.join(" ") + "\n"
         originalConsoleLog(...args)
       }
 
-      // Simplemente ejecutar el código del usuario sin verificar tests
       try {
-        // Crear un entorno seguro para ejecutar el código
         const userCode = code
-
-        // Ejecutar el código directamente
         eval(userCode)
       } catch (e) {
         throw new Error(`Error al ejecutar el código: ${e.message}`)
       }
 
-      // Restaurar console.log original
       console.log = originalConsoleLog
-
-      // Mostrar la salida capturada
       setOutput(consoleOutput || "sin salida")
     } catch (error) {
       setOutput(`Error en la ejecución: ${error.message}`)
@@ -248,13 +288,11 @@ export default function RetoPage() {
       let consoleOutput = ""
       const originalConsoleLog = console.log
 
-      // Capturar la salida de console.log
       console.log = (...args) => {
         consoleOutput += args.join(" ") + "\n"
         originalConsoleLog(...args)
       }
 
-      // Extraer el nombre de la función del código
       const functionNameMatch = code.match(/function\s+([a-zA-Z0-9_]+)\s*\(/)
       if (!functionNameMatch) {
         throw new Error("No se encontró ninguna función en tu código. Asegúrate de definir una función.")
@@ -262,21 +300,16 @@ export default function RetoPage() {
 
       const functionName = functionNameMatch[1]
 
-      // Ejecutar el código del usuario asegurándose de que se defina en el ámbito global
       try {
-        // Envolver el código en una IIFE que asigna explícitamente la función al objeto window
         const wrappedCode = `
           (function() {
             ${code}
-            // Asignar explícitamente la función al objeto window
             window["${functionName}"] = ${functionName};
           })();
         `
 
-        // Evaluar el código envuelto
         eval(wrappedCode)
 
-        // Verificar si la función existe en el ámbito global
         if (typeof window[functionName] !== "function") {
           throw new Error(`La función ${functionName} no está definida correctamente.`)
         }
@@ -286,7 +319,6 @@ export default function RetoPage() {
 
       console.log = originalConsoleLog
 
-      // Procesar casos de prueba
       const testResults = []
       let allTestsPassed = true
       let testOutput = ""
@@ -299,26 +331,20 @@ export default function RetoPage() {
           let error = null
 
           try {
-            // Parsear los argumentos si vienen como string con comas
             let args = test.input
 
             if (typeof args === "string" && args.includes(",")) {
               args = args.split(",").map((arg) => {
-                // Intentar convertir a número si es posible
                 const trimmed = arg.trim()
                 const num = Number(trimmed)
                 return isNaN(num) ? trimmed : num
               })
               result = window[functionName](...args)
             } else {
-              // Si no es una string con comas, pasar directamente
               result = window[functionName](args)
             }
 
-            // Convertir el resultado a string para comparar con el expected
             const resultStr = String(result)
-
-            // Comparar resultado con el esperado
             passed = resultStr === test.expected
           } catch (e) {
             error = e.message
@@ -357,7 +383,6 @@ export default function RetoPage() {
       setOutput(consoleOutput + "\n" + testOutput)
 
       if (allTestsPassed) {
-        // Guardar el estado de completado si todos los tests pasaron
         try {
           if (user) {
             const challengeData = {
@@ -365,7 +390,7 @@ export default function RetoPage() {
               challenge_id: id,
               completed_at: new Date().toISOString(),
               code: code,
-              is_saved: isSaved, // Mantener el estado de guardado actual
+              is_saved: isSaved,
             }
 
             const result = await saveCompletedChallenge(challengeData)
@@ -408,10 +433,8 @@ export default function RetoPage() {
   }
 
   const handleSubmit = async () => {
-    // First check if all tests pass
     await handleCheckCode()
 
-    // Si la solución es correcta, guardarla en la base de datos
     if (success) {
       try {
         if (user) {
@@ -420,7 +443,7 @@ export default function RetoPage() {
             challenge_id: id,
             completed_at: new Date().toISOString(),
             code: code,
-            is_saved: isSaved, // Mantener el estado de guardado actual
+            is_saved: isSaved,
           }
 
           const result = await saveCompletedChallenge(challengeData)
@@ -434,7 +457,6 @@ export default function RetoPage() {
             description: "Tu solución ha sido guardada correctamente.",
           })
 
-          // Show success modal
           setShowSuccessModal(true)
         }
       } catch (error) {
@@ -506,43 +528,29 @@ export default function RetoPage() {
   }
 
   const generateImage = () => {
-    // Implementation for generating and downloading an image
     const shareCard = document.getElementById("share-card")
     if (!shareCard) return
 
-    // This is a placeholder - in a real implementation, you would use a library like html2canvas
     toast({
       title: "Función no implementada",
       description: "La descarga de imágenes estará disponible próximamente.",
     })
-
-    // Example with html2canvas (would need to be imported)
-    /*
-    html2canvas(shareCard).then(canvas => {
-      const image = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = image;
-      link.download = `${reto.title}-completion.png`;
-      link.click();
-    });
-    */
   }
 
   const getDifficultyColor = (difficulty: string) => {
     const lowerDifficulty = typeof difficulty === "string" ? difficulty.toLowerCase() : ""
 
     if (lowerDifficulty.includes("fácil") || lowerDifficulty.includes("facil")) {
-      return "bg-green-500/20 text-green-500"
+      return "bg-green-500 text-white"
     } else if (lowerDifficulty.includes("intermedio") || lowerDifficulty.includes("medio")) {
-      return "bg-yellow-500/20 text-yellow-500"
+      return "bg-orange-500 text-white"
     } else if (lowerDifficulty.includes("difícil") || lowerDifficulty.includes("dificil")) {
-      return "bg-red-500/20 text-red-500"
+      return "bg-red-500 text-white"
     } else {
-      return "bg-blue-500/20 text-blue-500"
+      return "bg-blue-500 text-white"
     }
   }
 
-  // Mostrar un mensaje de carga mientras se verifica si el usuario es premium
   if (authLoading || isLoading) {
     return (
       <InteractiveGridBackground>
@@ -553,7 +561,6 @@ export default function RetoPage() {
     )
   }
 
-  // Si el usuario no es premium y el reto no es de acceso gratuito, mostrar mensaje de contenido premium
   if (!isPro && !isFreeAccess) {
     return (
       <InteractiveGridBackground>
@@ -570,7 +577,6 @@ export default function RetoPage() {
               <h1 className="text-xl font-bold">Retos anteriores</h1>
             </div>
 
-            {/* Buscar donde se usa el componente PremiumContentLock y añadir la prop freeAccess */}
             <PremiumContentLock
               freeAccess={reto?.free_access || false}
               title="Reto Premium"
@@ -598,54 +604,467 @@ export default function RetoPage() {
     )
   }
 
+  // Mobile version with tabs
+  if (isMobile) {
+    return (
+      <InteractiveGridBackground>
+        <div className="min-h-screen flex flex-col">
+          <NavbarWithUser />
+          <div className="container mx-auto px-4 py-4 flex-1 flex flex-col">
+            {/* Header con navegación */}
+            <div className="flex items-center justify-between mb-4">
+              <Link href="/retos">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Volver
+                </Button>
+              </Link>
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-1.5 text-yellow-500" />
+                <span className="font-medium text-sm">{formatTime(remainingTime)}</span>
+              </div>
+            </div>
+
+            {/* Cabecera del reto */}
+            <div className="bg-[#121212] rounded-lg overflow-hidden border border-gray-800 mb-4">
+              <div className="bg-[#1e1e1e] px-4 py-2 flex items-center justify-between border-b border-gray-800">
+                <div className="flex items-center">
+                  <Code className="h-4 w-4 mr-2 text-gray-400" />
+                  <span className="text-sm text-gray-300 font-mono">{fileName}</span>
+                </div>
+              </div>
+              <div className="p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <h1 className="font-bold text-white text-lg">{reto.title}</h1>
+                  <Badge className={`${getDifficultyColor(reto.difficulty)} ml-2 shrink-0 text-xs`}>
+                    {reto.difficulty}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabs for mobile */}
+            <Tabs defaultValue="description" className="flex-1 flex flex-col">
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsTrigger value="description">Descripción</TabsTrigger>
+                <TabsTrigger value="editor">Editor</TabsTrigger>
+                <TabsTrigger value="hints">Pistas</TabsTrigger>
+              </TabsList>
+
+              {/* Description tab content remains the same */}
+              <TabsContent value="description" className="flex-1 overflow-auto">
+                <div className="bg-[#121212] rounded-lg border border-gray-800 p-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h2 className="text-lg font-semibold mb-2 text-white">Descripción</h2>
+                      <p className="text-gray-400">{reto.description}</p>
+                    </div>
+
+                    <div>
+                      <h2 className="text-lg font-semibold mb-2 text-white">Ejemplos</h2>
+                      <div className="space-y-3">
+                        {reto.examples.map((example: any, index: number) => (
+                          <div key={index} className="bg-[#1e1e1e] p-3 rounded-md">
+                            <p className="text-sm font-mono mb-1.5 text-gray-300">Ejemplo {index + 1}:</p>
+                            <p className="text-sm font-mono mb-1">
+                              <span className="text-gray-400">Entrada:</span>{" "}
+                              <span className="text-green-400">{example.input}</span>
+                            </p>
+                            <p className="text-sm font-mono">
+                              <span className="text-gray-400">Salida:</span>{" "}
+                              <span className="text-blue-400">{example.output}</span>
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Botón de guardar */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleToggleSave}
+                      className={`w-full ${isSaved ? "bg-primary/10" : ""}`}
+                    >
+                      {isSaved ? "Quitar de guardados" : "Guardar reto"}
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Editor tab with console below */}
+              <TabsContent value="editor" className="flex-1 flex flex-col space-y-4">
+                {/* Editor container */}
+                <div className="flex-1 min-h-[300px] border border-gray-800 rounded-md overflow-hidden bg-[#1e1e1e]">
+                  <div className="bg-[#1e1e1e] px-4 py-2 text-sm font-medium border-b border-gray-800 flex items-center">
+                    <BookOpen className="h-4 w-4 mr-2 text-gray-400" />
+                    <span className="text-gray-300">Editor</span>
+                  </div>
+                  <div style={{ height: "calc(100% - 40px)", minHeight: "260px" }}>
+                    <Editor
+                      height="100%"
+                      defaultLanguage="javascript"
+                      theme="vs-dark"
+                      value={code}
+                      onChange={(value) => setCode(value || "")}
+                      onMount={(editor) => {
+                        editorRef.current = editor
+                        // Force layout updates
+                        setTimeout(() => {
+                          editor.layout()
+                          const editorElement = editor.getDomNode()
+                          if (editorElement) {
+                            editorElement.style.height = "260px"
+                          }
+                        }, 100)
+                      }}
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                        lineNumbers: "on",
+                        scrollBeyondLastLine: false,
+                        folding: true,
+                        automaticLayout: true,
+                        wordWrap: "on",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Console below editor */}
+                <div className="h-[200px] border border-gray-800 rounded-md overflow-hidden bg-[#121212]">
+                  <div className="bg-[#1e1e1e] px-4 py-2 text-sm font-medium border-b border-gray-800 flex items-center">
+                    <Terminal className="h-4 w-4 mr-2 text-gray-400" />
+                    <span className="text-gray-300">Consola</span>
+                  </div>
+                  <div className="h-[calc(100%-40px)]">
+                    {isRunning ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent"></div>
+                      </div>
+                    ) : (
+                      <CodeOutput value={output || "Ejecuta tu código para ver los resultados"} height="100%" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" size="sm" onClick={resetCode}>
+                    <RefreshCw className="h-4 w-4 mr-1.5" />
+                    Reiniciar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={runCode} disabled={isRunning}>
+                    <Play className="h-4 w-4 mr-1.5" />
+                    Ejecutar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleCheckCode} disabled={isRunning}>
+                    <CheckCircle className="h-4 w-4 mr-1.5" />
+                    Comprobar
+                  </Button>
+                  <Button size="sm" onClick={handleSubmit} disabled={isRunning}>
+                    <Save className="h-4 w-4 mr-1.5" />
+                    Enviar
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {/* Hints tab content remains the same */}
+              <TabsContent value="hints" className="flex-1 overflow-auto">
+                <div className="bg-[#121212] rounded-lg border border-gray-800 p-4">
+                  <div className="space-y-4">
+                    <h2 className="text-lg font-semibold mb-2 text-white">Pistas</h2>
+                    {reto.hints && reto.hints.length > 0 ? (
+                      <div className="space-y-3">
+                        {reto.hints.map((hint: string, index: number) => (
+                          <div key={index} className="bg-[#1e1e1e] p-3 rounded-md">
+                            <h3 className="font-medium mb-1 text-white">Pista {index + 1}</h3>
+                            <p className="text-gray-400">{hint}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-400">No hay pistas disponibles para este reto.</p>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            {/* Mostrar banner promocional para usuarios no premium en retos gratuitos */}
+            {!isPro && isFreeAccess && (
+              <div className="mt-4 p-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="bg-yellow-500/20 p-2 rounded-full shrink-0">
+                    <Trophy className="h-5 w-5 text-yellow-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium mb-1">¿Te gusta este reto?</h3>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Este es uno de nuestros retos gratuitos. Actualiza a Premium para acceder a todos los retos.
+                    </p>
+                    <Link href="/planes">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/30"
+                      >
+                        Ver planes Premium
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {showSuccessModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+              <div className="bg-black border border-border rounded-lg max-w-lg w-full overflow-hidden">
+                <div className="p-4 border-b border-border flex justify-between items-center">
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-yellow-400" />
+                    ¡Reto completado!
+                  </h3>
+                  <button onClick={() => setShowSuccessModal(false)} className="text-muted-foreground hover:text-white">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="text-center">
+                    <div className="mb-4 text-base">
+                      ¡Felicidades, <span className="font-bold">{username}</span>!
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Has completado exitosamente el reto <span className="font-bold">{reto.title}</span>.
+                    </p>
+                  </div>
+                  <div className="relative border border-border rounded-lg overflow-hidden" id="share-card">
+                    <div className="p-4 flex flex-col items-center justify-center min-h-[180px]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Trophy className="h-6 w-6 text-yellow-400" />
+                        <span className="text-base font-semibold flex items-center gap-1">
+                          <span className="bg-white text-black px-2">1code</span>
+                          <span className="text-white">1day</span>
+                        </span>
+                      </div>
+                      <div className="text-center mb-4">
+                        <div className="text-lg font-bold mb-1">{username}</div>
+                        <div className="text-xs text-muted-foreground">ha completado el reto</div>
+                        <div className="text-lg font-bold mt-1">{reto.title}</div>
+                      </div>
+                      <div className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(reto.difficulty)}`}>
+                        {reto.difficulty}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
+                    <div className="flex justify-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleShare("twitter")}
+                        title="Compartir en Twitter"
+                      >
+                        <Twitter className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleShare("facebook")}
+                        title="Compartir en Facebook"
+                      >
+                        <Facebook className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleShare("linkedin")}
+                        title="Compartir en LinkedIn"
+                      >
+                        <Linkedin className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 border-t border-border flex flex-col gap-2">
+                  <Button variant="outline" onClick={() => setShowSuccessModal(false)}>
+                    Cerrar
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowSuccessModal(false)
+                      window.location.href = "/retos"
+                    }}
+                  >
+                    Siguiente reto
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <KeyboardHandler editorRef={editorRef} />
+          <ClipboardHelper editorRef={editorRef} />
+          <Toaster />
+        </div>
+      </InteractiveGridBackground>
+    )
+  }
+
+  // Versión desktop con layout de dos columnas
   return (
     <InteractiveGridBackground>
       <div className="min-h-screen flex flex-col">
         <NavbarWithUser />
         <div className="container mx-auto px-4 py-4 flex-1 flex flex-col">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-4">
-            <div className="flex items-center flex-wrap gap-2">
-              <Link href="/retos">
-                <Button variant="ghost" size="sm" className="mr-2">
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Volver</span>
-                </Button>
-              </Link>
-              <h1 className="text-lg sm:text-xl font-bold">{reto.title}</h1>
-              <Badge variant="outline" className={`${getDifficultyColor(reto.difficulty)}`}>
-                {reto.difficulty}
-              </Badge>
-
-              {/* Indicador de Premium o Gratuito */}
-              {!isPro &&
-                (isFreeAccess ? (
-                  <Badge className="bg-green-500/20 text-green-500 border-green-500/20">Gratuito</Badge>
-                ) : (
-                  <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1">
-                    <Lock className="h-3 w-3" />
-                    Premium
-                  </Badge>
-                ))}
-            </div>
-            <div className="flex items-center self-end sm:self-auto">
-              <div className="flex items-center bg-secondary px-3 py-1 rounded-md">
-                <Clock className="h-4 w-4 mr-1.5 text-yellow-500" />
-                <span className="font-medium">{formatTime(remainingTime)}</span>
-              </div>
-            </div>
+          {/* Header con navegación */}
+          <div className="flex items-center mb-4">
+            <Link href="/retos">
+              <Button variant="ghost" size="sm" className="mr-2">
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                <span>Volver</span>
+              </Button>
+            </Link>
           </div>
 
-          <Tabs defaultValue="editor" className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-3 mb-4 text-xs sm:text-sm">
-              <TabsTrigger value="editor">Editor</TabsTrigger>
-              <TabsTrigger value="descripcion">Descripción</TabsTrigger>
-              <TabsTrigger value="pistas">Pistas</TabsTrigger>
-            </TabsList>
+          {/* Contenedor principal con grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 flex-1">
+            {/* Panel izquierdo: Descripción del reto con pestañas */}
+            <div className="lg:col-span-2 flex flex-col">
+              <div className="bg-[#121212] rounded-lg overflow-hidden border border-gray-800 flex flex-col h-full">
+                {/* Header con nombre de archivo */}
+                <div className="bg-[#1e1e1e] px-4 py-2 flex items-center justify-between border-b border-gray-800">
+                  <div className="flex items-center">
+                    <Code className="h-4 w-4 mr-2 text-gray-400" />
+                    <span className="text-sm text-gray-300 font-mono">{fileName}</span>
+                  </div>
+                  <div className="flex space-x-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                  </div>
+                </div>
 
-            <TabsContent value="editor" className="flex-1 flex flex-col">
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 flex-1">
-                <div className="lg:col-span-3 flex flex-col">
-                  <div className="editor-wrapper flex-1 rounded-md overflow-hidden border border-border">
+                {/* Cabecera del reto */}
+                <div className="p-4 border-b border-gray-800">
+                  <div className="flex justify-between items-start mb-3">
+                    <h1 className="font-bold text-white text-xl">{reto.title}</h1>
+                    <Badge className={`${getDifficultyColor(reto.difficulty)} ml-2 shrink-0`}>{reto.difficulty}</Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center text-sm text-gray-400">
+                      <Clock className="h-4 w-4 mr-1.5 text-yellow-500" />
+                      <span className="font-medium">{formatTime(remainingTime)}</span>
+                    </div>
+
+                    {/* Indicador de Premium o Gratuito */}
+                    {!isPro &&
+                      (isFreeAccess ? (
+                        <Badge className="bg-green-500 text-white">Gratuito</Badge>
+                      ) : (
+                        <Badge className="bg-yellow-500 text-white flex items-center gap-1">
+                          <Lock className="h-3 w-3" />
+                          Premium
+                        </Badge>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Tabs para escritorio */}
+                <Tabs defaultValue="description" className="flex-1 flex flex-col">
+                  <div className="border-b border-gray-800">
+                    <TabsList className="flex w-full bg-transparent p-0">
+                      <TabsTrigger
+                        value="description"
+                        className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
+                      >
+                        Descripción
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="hints"
+                        className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
+                      >
+                        Pistas
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  {/* Tab de descripción */}
+                  <TabsContent value="description" className="flex-1 overflow-auto p-4">
+                    <div className="space-y-4">
+                      <div>
+                        <h2 className="text-lg font-semibold mb-2 text-white">Descripción</h2>
+                        <p className="text-gray-400">{reto.description}</p>
+                      </div>
+
+                      <div>
+                        <h2 className="text-lg font-semibold mb-2 text-white">Ejemplos</h2>
+                        <div className="space-y-3">
+                          {reto.examples.map((example: any, index: number) => (
+                            <div key={index} className="bg-[#1e1e1e] p-3 rounded-md">
+                              <p className="text-sm font-mono mb-1.5 text-gray-300">Ejemplo {index + 1}:</p>
+                              <p className="text-sm font-mono mb-1">
+                                <span className="text-gray-400">Entrada:</span>{" "}
+                                <span className="text-green-400">{example.input}</span>
+                              </p>
+                              <p className="text-sm font-mono">
+                                <span className="text-gray-400">Salida:</span>{" "}
+                                <span className="text-blue-400">{example.output}</span>
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* Tab de pistas */}
+                  <TabsContent value="hints" className="flex-1 overflow-auto p-4">
+                    <div className="space-y-4">
+                      <h2 className="text-lg font-semibold mb-2 text-white">Pistas</h2>
+                      {reto.hints && reto.hints.length > 0 ? (
+                        <div className="space-y-3">
+                          {reto.hints.map((hint: string, index: number) => (
+                            <div key={index} className="bg-[#1e1e1e] p-3 rounded-md">
+                              <h3 className="font-medium mb-1 text-white">Pista {index + 1}</h3>
+                              <p className="text-gray-400">{hint}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-400">No hay pistas disponibles para este reto.</p>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                {/* Acciones del reto */}
+                <div className="p-3 border-t border-gray-800 bg-[#1e1e1e]">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleToggleSave}
+                    className={`w-full ${isSaved ? "bg-primary/10" : ""}`}
+                  >
+                    {isSaved ? "Quitar de guardados" : "Guardar reto"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Panel derecho: Editor y consola */}
+            <div className="lg:col-span-3 flex flex-col">
+              <div className="flex flex-col h-full gap-4">
+                {/* Editor de código */}
+                <div className="flex-1 border border-gray-800 rounded-md overflow-hidden bg-[#1e1e1e] min-h-[500px]">
+                  <div className="bg-[#1e1e1e] px-4 py-2 text-sm font-medium border-b border-gray-800 flex items-center">
+                    <BookOpen className="h-4 w-4 mr-2 text-gray-400" />
+                    <span className="text-gray-300">Editor</span>
+                  </div>
+                  <div className="h-[calc(100%-40px)]">
                     <Editor
                       height="100%"
                       defaultLanguage="javascript"
@@ -670,120 +1089,86 @@ export default function RetoPage() {
                       }}
                     />
                   </div>
-                  <div className="mt-4 flex flex-col sm:flex-row sm:justify-between gap-2">
-                    <Button variant="outline" size="sm" onClick={resetCode} className="w-full sm:w-auto">
-                      <RefreshCw className="h-4 w-4 mr-1.5" />
-                      Reiniciar
-                    </Button>
+                </div>
+
+                {/* Consola de salida */}
+                <div className="h-64 border border-gray-800 rounded-md overflow-hidden bg-[#121212]">
+                  <div className="bg-[#1e1e1e] px-4 py-2 text-sm font-medium border-b border-gray-800 flex items-center">
+                    <Terminal className="h-4 w-4 mr-2 text-gray-400" />
+                    <span className="text-gray-300">Consola</span>
+                  </div>
+                  <div className="h-[calc(100%-40px)]">
+                    {isRunning ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent"></div>
+                      </div>
+                    ) : (
+                      <CodeOutput value={output || "Ejecuta tu código para ver los resultados"} height="100%" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Barra de acciones */}
+                <div className="flex flex-wrap gap-2 justify-end">
+                  <Button variant="outline" size="sm" onClick={resetCode} className="flex-1 sm:flex-none">
+                    <RefreshCw className="h-4 w-4 mr-1.5" />
+                    Reiniciar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={runCode}
+                    disabled={isRunning}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <Play className="h-4 w-4 mr-1.5" />
+                    Ejecutar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCheckCode}
+                    disabled={isRunning}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1.5" />
+                    Comprobar
+                  </Button>
+                  <Button size="sm" onClick={handleSubmit} disabled={isRunning} className="flex-1 sm:flex-none">
+                    <Save className="h-4 w-4 mr-1.5" />
+                    Enviar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Mostrar banner promocional para usuarios no premium en retos gratuitos */}
+          {!isPro && isFreeAccess && (
+            <div className="mt-6 p-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="bg-yellow-500/20 p-2 rounded-full">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1">¿Te gusta este reto?</h3>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Este es uno de nuestros retos gratuitos. Actualiza a Premium para acceder a todos los retos
+                    anteriores y desbloquear todas las funcionalidades.
+                  </p>
+                  <Link href="/planes">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleToggleSave}
-                      className={`w-full sm:w-auto ${isSaved ? "bg-primary/10" : ""}`}
+                      className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/30"
                     >
-                      {isSaved ? "Quitar de guardados" : "Guardar reto"}
+                      Ver planes Premium
                     </Button>
-                    <div className="flex gap-2 w-full sm:w-auto justify-between sm:justify-end">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={runCode}
-                        disabled={isRunning}
-                        className="flex-1 sm:flex-none"
-                      >
-                        <Play className="h-4 w-4 mr-1.5" />
-                        Ejecutar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCheckCode}
-                        disabled={isRunning}
-                        className="flex-1 sm:flex-none"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1.5" />
-                        Comprobar
-                      </Button>
-                      <Button size="sm" onClick={handleSubmit} disabled={isRunning} className="flex-1 sm:flex-none">
-                        <Save className="h-4 w-4 mr-1.5" />
-                        Enviar
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <div className="lg:col-span-2 flex flex-col">
-                  <div className="flex-1 border border-border rounded-md overflow-hidden bg-card/70">
-                    <div className="bg-muted px-4 py-2 text-sm font-medium border-b border-border">Consola</div>
-                    <div className="h-full">
-                      {isRunning ? (
-                        <div className="flex items-center justify-center h-full">
-                          <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent"></div>
-                        </div>
-                      ) : (
-                        <CodeOutput value={output || "Ejecuta tu código para ver los resultados"} height="400px" />
-                      )}
-                    </div>
-                  </div>
+                  </Link>
                 </div>
               </div>
-            </TabsContent>
-
-            <TabsContent value="descripcion" className="flex-1">
-              <div className="border border-border bg-card/50 p-6 rounded-lg">
-                <h2 className="text-xl font-semibold mb-4">{reto.title}</h2>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge className={getDifficultyColor(reto.difficulty)}>{reto.difficulty}</Badge>
-                  <Badge variant="outline">{reto.category}</Badge>
-
-                  {/* Indicador de Premium o Gratuito */}
-                  {!isPro &&
-                    (isFreeAccess ? (
-                      <Badge className="bg-green-500/20 text-green-500 border-green-500/20">Reto Gratuito</Badge>
-                    ) : (
-                      <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 flex items-center gap-1">
-                        <Lock className="h-3 w-3" />
-                        Premium
-                      </Badge>
-                    ))}
-                </div>
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2">Descripción</h3>
-                  <p className="text-muted-foreground">{reto.description}</p>
-                </div>
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2">Ejemplos</h3>
-                  <div className="space-y-3">
-                    {reto.examples.map((example: any, index: number) => (
-                      <div key={index} className="bg-secondary p-4 rounded-md">
-                        <p className="text-sm font-mono mb-2">Ejemplo {index + 1}:</p>
-                        <p className="text-sm font-mono mb-1">
-                          Entrada: <span className="text-green-400">{example.input}</span>
-                        </p>
-                        <p className="text-sm font-mono">
-                          Salida: <span className="text-blue-400">{example.output}</span>
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="pistas" className="flex-1">
-              <div className="border border-border bg-card/50 p-6 rounded-lg">
-                <h2 className="text-xl font-semibold mb-4">Pistas</h2>
-                <p className="text-muted-foreground mb-6">Usa estas pistas si te quedas atascado</p>
-                <div className="space-y-6">
-                  {reto.hints.map((hint: string, index: number) => (
-                    <div key={index} className="bg-secondary/30 p-4 rounded-md">
-                      <h3 className="font-medium mb-2">Pista {index + 1}</h3>
-                      <p className="text-muted-foreground">{hint}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
 
           {showSuccessModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
@@ -871,33 +1256,6 @@ export default function RetoPage() {
                   >
                     Siguiente reto
                   </Button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Mostrar banner promocional para usuarios no premium en retos gratuitos */}
-          {!isPro && isFreeAccess && (
-            <div className="mt-6 p-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg">
-              <div className="flex items-start gap-3">
-                <div className="bg-yellow-500/20 p-2 rounded-full">
-                  <Trophy className="h-5 w-5 text-yellow-500" />
-                </div>
-                <div>
-                  <h3 className="font-medium mb-1">¿Te gusta este reto?</h3>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Este es uno de nuestros retos gratuitos. Actualiza a Premium para acceder a todos los retos
-                    anteriores y desbloquear todas las funcionalidades.
-                  </p>
-                  <Link href="/planes">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-yellow-500/20 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/30"
-                    >
-                      Ver planes Premium
-                    </Button>
-                  </Link>
                 </div>
               </div>
             </div>

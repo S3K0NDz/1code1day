@@ -5,11 +5,11 @@ import React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Check, HelpCircle, Star, Trophy, Zap, X } from "lucide-react"
+import { Check, HelpCircle, Star, Trophy, Zap, X, Code, Terminal } from "lucide-react"
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
 
@@ -239,49 +239,93 @@ export default function PlanesPage() {
             {plans.map((plan, index) => (
               <Card
                 key={index}
-                className={`${plan.color} ${plan.popular ? "scale-105 shadow-lg" : ""} relative overflow-hidden`}
+                className={`relative overflow-hidden font-mono border-2 ${
+                  plan.popular ? "border-primary" : "border-border"
+                }`}
               >
-                {plan.popular && (
-                  <div className="absolute top-0 right-0">
-                    <div className="bg-primary/20 text-primary-foreground text-sm font-medium px-3 py-1 rounded-bl-lg">
-                      Recomendado
-                    </div>
+                {/* Barra superior estilo editor de código */}
+                <div className="flex items-center justify-between bg-black/80 px-4 py-2">
+                  <div className="flex items-center">
+                    <Terminal className="h-4 w-4 mr-2 text-white" />
+                    <span className="text-xs text-white">plan-{plan.name.toLowerCase()}.js</span>
                   </div>
-                )}
-                {plan.savings && (
-                  <div className="absolute top-0 left-0">
-                    <div className="bg-green-500/20 text-green-500 text-sm font-medium px-3 py-1 rounded-br-lg">
-                      {plan.savings}
-                    </div>
+                  <div className="flex space-x-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
                   </div>
-                )}
-                <CardHeader>
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
+                </div>
+
+                {/* Contenido principal */}
+                <div className="p-6 bg-black/5">
+                  {/* Encabezado con nombre del plan */}
                   <div className="mb-6">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground ml-1">{plan.period}</span>
+                    <div className="flex items-center mb-2">
+                      <Code className="h-5 w-5 text-primary mr-2" />
+                      <h3 className="text-2xl font-bold">{plan.name}</h3>
+                      {plan.popular && (
+                        <Badge className="ml-2 bg-primary/20 text-primary border-primary/20">Recomendado</Badge>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground">{plan.description}</p>
                   </div>
-                  <ul className="space-y-3 mb-8">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 shrink-0 mt-0.5" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                    {plan.limitations.map((limitation, i) => (
-                      <li key={i} className="flex items-start text-muted-foreground">
-                        <X className="h-5 w-5 text-muted-foreground mr-2 shrink-0 mt-0.5" />
-                        <span>{limitation}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-                <CardFooter>
+
+                  {/* Precio */}
+                  <div className="bg-black/10 p-4 rounded-md mb-6">
+                    <div className="flex items-baseline">
+                      <span className="text-3xl font-bold">{plan.price}</span>
+                      <span className="text-muted-foreground ml-2">{plan.period}</span>
+                    </div>
+                    {plan.savings && (
+                      <div className="mt-2">
+                        <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/20">
+                          {plan.savings}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Características */}
+                  <div className="mb-6">
+                    <div className="flex items-center mb-3">
+                      <span className="text-blue-500 mr-2">// Incluye:</span>
+                    </div>
+                    <ul className="space-y-2">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-start">
+                          <Check className="h-5 w-5 text-green-500 mr-2 shrink-0 mt-0.5" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Limitaciones */}
+                  {plan.limitations.length > 0 && (
+                    <div className="mb-6">
+                      <div className="flex items-center mb-3">
+                        <span className="text-yellow-500 mr-2">// Limitaciones:</span>
+                      </div>
+                      <ul className="space-y-2">
+                        {plan.limitations.map((limitation, i) => (
+                          <li key={i} className="flex items-start">
+                            <X className="h-5 w-5 text-red-500 mr-2 shrink-0 mt-0.5" />
+                            <span className="text-muted-foreground">{limitation}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botón de acción */}
+                <CardFooter className="p-6 bg-black/10 border-t border-border">
                   <Link href={plan.ctaLink} className="w-full">
-                    <Button className="w-full" variant={plan.popular ? "default" : "outline"}>
+                    <Button
+                      className={`w-full ${plan.popular ? "bg-primary hover:bg-primary/90" : ""}`}
+                      variant={plan.popular ? "default" : "outline"}
+                      size="lg"
+                    >
                       {plan.cta}
                     </Button>
                   </Link>

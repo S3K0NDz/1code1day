@@ -21,7 +21,7 @@ export function CodeOutput({ value, height = "300px" }: CodeOutputProps) {
   return (
     <div
       ref={outputRef}
-      className="font-mono text-sm bg-black/50 p-4 rounded-md overflow-auto"
+      className="font-mono text-sm text-gray-300 bg-[#121212] p-4 rounded-md overflow-auto"
       style={{ height, maxHeight: height }}
     />
   )

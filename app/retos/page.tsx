@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -11,7 +10,6 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Calendar,
-  Clock,
   Filter,
   Lock,
   Search,
@@ -22,6 +20,10 @@ import {
   Sparkles,
   CalendarDays,
   UserRound,
+  LayoutGrid,
+  List,
+  Terminal,
+  Code,
 } from "lucide-react"
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
@@ -47,6 +49,7 @@ export default function RetosPage() {
   const [loginModalVisible, setLoginModalVisible] = useState(false)
   const [selectedReto, setSelectedReto] = useState(null)
   const [activeTab, setActiveTab] = useState("free")
+  const [viewMode, setViewMode] = useState("grid") // New state for view mode (grid or list)
   const { user, isPro, isLoading: authLoading } = useAuth()
   const router = useRouter()
 
@@ -98,6 +101,22 @@ export default function RetosPage() {
             // Determinar si es un reto diario
             const isDailyChallenge = reto.daily_date !== null
 
+            // Extraer el nombre de la función del código inicial
+            let functionName = ""
+            try {
+              const functionMatch = reto.initialcode?.match(/function\s+([a-zA-Z0-9_]+)\s*\(/i)
+              if (functionMatch && functionMatch[1]) {
+                functionName = functionMatch[1]
+              }
+            } catch (e) {
+              console.error("Error extracting function name:", e)
+            }
+
+            // Generar un nombre de archivo basado en el título o la función
+            const fileName = functionName
+              ? `${functionName}.js`
+              : `${reto.title?.toLowerCase().replace(/\s+/g, "-")}.js`
+
             return {
               ...reto,
               completed: completedIds.includes(reto.id),
@@ -107,14 +126,10 @@ export default function RetosPage() {
               description: String(reto.description || "Sin descripción"),
               difficulty: String(reto.difficulty || "Sin dificultad"),
               category: String(reto.category || "Sin categoría"),
+              functionName: functionName,
+              fileName: fileName,
               // Formatear la fecha del reto diario si existe
-              formattedDailyDate: reto.daily_date
-                ? new Date(reto.daily_date).toLocaleDateString("es-ES", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })
-                : null,
+              // No need for formattedDailyDate anymore as we format directly in the render
             }
           })
 
@@ -181,25 +196,26 @@ export default function RetosPage() {
     const lowerDifficulty = typeof difficulty === "string" ? difficulty.toLowerCase() : ""
 
     if (lowerDifficulty.includes("fácil") || lowerDifficulty.includes("facil")) {
-      return "bg-green-500/20 text-green-500"
+      return "bg-green-500 text-white"
     } else if (lowerDifficulty.includes("intermedio") || lowerDifficulty.includes("medio")) {
-      return "bg-yellow-500/20 text-yellow-500"
+      return "bg-orange-500 text-white"
     } else if (lowerDifficulty.includes("difícil") || lowerDifficulty.includes("dificil")) {
-      return "bg-red-500/20 text-red-500"
+      return "bg-red-500 text-white"
     } else {
-      return "bg-blue-500/20 text-blue-500"
+      return "bg-blue-500 text-white"
     }
   }
 
   const formatDate = (dateString) => {
-    if (!dateString) return "Fecha no disponible"
+    if (!dateString) return "N/A"
 
     try {
       const date = new Date(dateString)
-      return date.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })
+      // Format: YYYY-MM-DD
+      return date.toISOString().split("T")[0]
     } catch (error) {
       console.error("Error al formatear fecha:", error)
-      return "Fecha inválida"
+      return "Invalid date"
     }
   }
 
@@ -228,6 +244,12 @@ export default function RetosPage() {
 
   const handleGoToPricingPage = () => {
     router.push("/planes")
+  }
+
+  // Función para truncar texto
+  const truncateText = (text, maxLength) => {
+    if (!text) return ""
+    return text.length > maxLength ? text.substring(0, maxLength) + "..." : text
   }
 
   return (
@@ -408,21 +430,43 @@ export default function RetosPage() {
 
           {/* Pestañas para separar retos gratuitos y premium */}
           <Tabs defaultValue="free" value={activeTab} onValueChange={setActiveTab} className="mb-6">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="free" className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Retos gratuitos
-              </TabsTrigger>
-              <TabsTrigger value="premium" className="flex items-center gap-2">
-                <Lock className="h-4 w-4" />
-                Retos premium
-                {!isPro && (
-                  <Badge variant="outline" className="ml-2 bg-yellow-500/20 text-yellow-500 border-yellow-500/20">
-                    Actualiza
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex justify-between items-center mb-4">
+              <TabsList className="grid w-full max-w-md grid-cols-2">
+                <TabsTrigger value="free" className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Retos gratuitos
+                </TabsTrigger>
+                <TabsTrigger value="premium" className="flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  Retos premium
+                  {!isPro && (
+                    <Badge variant="outline" className="ml-2 bg-yellow-500/20 text-yellow-500 border-yellow-500/20">
+                      Actualiza
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Botones para cambiar entre vista de cuadrícula y lista */}
+              <div className="flex items-center gap-2 bg-secondary rounded-md p-1">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-8 px-2"
+                  onClick={() => setViewMode("grid")}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-8 px-2"
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
 
             {/* Contenido de las pestañas */}
             <TabsContent value="free" className="mt-0">
@@ -485,19 +529,41 @@ export default function RetosPage() {
 
             {/* Lista de retos (común para ambas pestañas) */}
             {isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {[...Array(8)].map((_, index) => (
-                  <div key={index} className="h-[220px] border border-border rounded-lg p-4 animate-pulse">
-                    <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                    <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
-                    <div className="h-20 bg-muted rounded mb-4"></div>
-                    <div className="flex justify-between items-center">
-                      <div className="h-4 bg-muted rounded w-1/3"></div>
-                      <div className="h-6 bg-muted rounded w-1/4"></div>
+              viewMode === "grid" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+                  {[...Array(8)].map((_, index) => (
+                    <div key={index} className="h-[360px] border border-gray-800 rounded-lg bg-[#121212] animate-pulse">
+                      <div className="h-10 bg-[#1e1e1e] rounded-t-lg border-b border-gray-800 mb-4"></div>
+                      <div className="px-4">
+                        <div className="h-6 bg-[#1e1e1e] rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-[#1e1e1e] rounded w-1/2 mb-4"></div>
+                        <div className="h-[120px] bg-[#1e1e1e] rounded mb-4"></div>
+                        <div className="flex justify-between items-center mb-4">
+                          <div className="h-4 bg-[#1e1e1e] rounded w-1/3"></div>
+                          <div className="h-6 bg-[#1e1e1e] rounded w-1/4"></div>
+                        </div>
+                        <div className="h-6 bg-[#1e1e1e] rounded w-1/4 ml-auto"></div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {[...Array(8)].map((_, index) => (
+                    <div key={index} className="border border-border rounded-lg p-4 animate-pulse">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="h-4 bg-muted rounded w-1/4"></div>
+                        <div className="h-6 bg-muted rounded w-1/6"></div>
+                      </div>
+                      <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                      <div className="flex justify-between items-center">
+                        <div className="h-4 bg-muted rounded w-1/5"></div>
+                        <div className="h-4 bg-muted rounded w-1/5"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
             ) : (
               <>
                 {filteredRetos.length === 0 ? (
@@ -511,66 +577,161 @@ export default function RetosPage() {
                     </p>
                     <Button onClick={clearFilters}>Limpiar filtros</Button>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                ) : viewMode === "grid" ? (
+                  // Vista de cuadrícula
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
                     {filteredRetos.map((reto) => (
                       <div
                         key={reto.id}
-                        className="h-[220px] cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md"
+                        className="cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md"
                         onClick={() => handleRetoClick(reto)}
                       >
-                        <Card
-                          className={`flex flex-col justify-between w-full h-full border ${
-                            !user
-                              ? "hover:border-blue-500"
-                              : !isPro && !reto.isFreeAccess
-                                ? "hover:border-yellow-500"
-                                : "hover:border-primary"
-                          }`}
-                        >
-                          <CardContent className="p-4 flex flex-col h-full">
-                            <div className="flex items-start justify-between mb-2">
-                              <h3 className="font-semibold line-clamp-2">{reto.title}</h3>
-                              <Badge
-                                variant="outline"
-                                className={`${getDifficultyColor(reto.difficulty)} ml-2 shrink-0`}
-                              >
+                        {/* Tarjeta con altura fija y estructura interna consistente */}
+                        <div className="bg-[#121212] rounded-lg overflow-hidden border border-gray-800 h-[360px] flex flex-col">
+                          {/* Header con nombre de archivo - altura fija */}
+                          <div className="bg-[#1e1e1e] px-4 py-2 flex items-center justify-between border-b border-gray-800 h-10">
+                            <div className="flex items-center overflow-hidden">
+                              <Code className="h-4 w-4 mr-2 text-gray-400 shrink-0" />
+                              <span className="text-sm text-gray-300 font-mono truncate">{reto.fileName}</span>
+                            </div>
+                            <div className="flex space-x-1.5 shrink-0">
+                              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                            </div>
+                          </div>
+
+                          {/* Contenido principal - estructura flex con alturas fijas */}
+                          <div className="p-4 flex-1 flex flex-col">
+                            {/* Encabezado con título y badge - altura fija */}
+                            <div className="flex justify-between items-start gap-2 mb-3 h-14">
+                              <h3 className="font-bold text-white text-lg leading-tight line-clamp-2">{reto.title}</h3>
+                              <Badge className={`${getDifficultyColor(reto.difficulty)} shrink-0`}>
                                 {reto.difficulty}
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground line-clamp-3 mb-2">{reto.description}</p>
 
-                            <div className="mt-auto flex items-center justify-between">
-                              <div className="flex items-center text-xs text-muted-foreground">
-                                {reto.isDailyChallenge ? (
-                                  <div className="flex items-center">
-                                    <CalendarDays className="h-3 w-3 mr-1" />
-                                    <span>Reto del {reto.formattedDailyDate}</span>
+                            {/* Descripción - altura fija */}
+                            <p className="text-gray-400 text-sm mb-4 line-clamp-2 h-10">{reto.description}</p>
+
+                            {/* Código de ejemplo - altura fija */}
+                            <div className="bg-[#1e1e1e] rounded p-3 mb-4 font-mono text-xs h-[120px] overflow-hidden">
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500 w-5 text-right">1</span>
+                                <div>
+                                  <span className="text-blue-400">function</span>{" "}
+                                  <span className="text-yellow-300">{reto.functionName || "miFuncion"}</span>
+                                  <span className="text-gray-300">(</span>
+                                  <span className="text-orange-300">params</span>
+                                  <span className="text-gray-300">)</span> <span className="text-gray-300">{"{"}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500 w-5 text-right">2</span>
+                                <span className="text-gray-500 pl-4">{"// TODO: Implementa tu solución aquí"}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500 w-5 text-right">3</span>
+                                <span className="text-gray-300">{"}"}</span>
+                              </div>
+                            </div>
+
+                            {/* Footer con fecha y badges - siempre al final con mt-auto */}
+                            <div className="mt-auto">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center text-xs text-gray-400">
+                                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                                  <span className="font-mono">
+                                    {reto.isDailyChallenge
+                                      ? `${reto.daily_date ? new Date(reto.daily_date).toISOString().split("T")[0] : "N/A"}`
+                                      : formatDate(reto.createdat)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  {reto.isDailyChallenge && (
+                                    <Badge className="bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded font-mono">
+                                      daily
+                                    </Badge>
+                                  )}
+                                  {user && reto.completed ? (
+                                    <div className="bg-[#1e1e1e] text-xs text-green-400 px-2 py-1 rounded flex items-center">
+                                      <Terminal className="h-3 w-3 mr-1" />
+                                      <span className="font-mono">$ test: passed</span>
+                                    </div>
+                                  ) : (
+                                    <div className="bg-[#1e1e1e] text-xs text-gray-300 px-2 py-1 rounded flex items-center">
+                                      <Terminal className="h-3 w-3 mr-1" />
+                                      <span className="font-mono">$ run test</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  // Vista de lista - estructura consistente
+                  <div className="space-y-3">
+                    {filteredRetos.map((reto) => (
+                      <div
+                        key={reto.id}
+                        className="cursor-pointer transition-all duration-200 hover:shadow-md"
+                        onClick={() => handleRetoClick(reto)}
+                      >
+                        <div className="bg-[#121212] rounded-lg overflow-hidden border border-gray-800">
+                          <div className="p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center overflow-hidden">
+                                <Code className="h-4 w-4 mr-2 text-gray-400 shrink-0" />
+                                <div className="font-mono text-sm text-gray-300 truncate">
+                                  <span className="text-blue-400">function</span>{" "}
+                                  <span className="text-yellow-300">{reto.functionName || "miFuncion"}</span>
+                                  <span className="text-gray-300">()</span>{" "}
+                                </div>
+                              </div>
+                              <Badge className={`${getDifficultyColor(reto.difficulty)} ml-2 shrink-0`}>
+                                {reto.difficulty}
+                              </Badge>
+                            </div>
+
+                            <p className="text-gray-400 text-sm mt-1 line-clamp-1 pl-6">
+                              {truncateText(reto.description, 80)}
+                            </p>
+
+                            <div className="flex items-center justify-between mt-2">
+                              <div className="flex items-center text-xs text-gray-400">
+                                <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                                <span className="font-mono">
+                                  {reto.isDailyChallenge
+                                    ? `${reto.daily_date ? new Date(reto.daily_date).toISOString().split("T")[0] : "N/A"}`
+                                    : formatDate(reto.createdat)}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {reto.isDailyChallenge && (
+                                  <Badge className="bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded font-mono">
+                                    daily
+                                  </Badge>
+                                )}
+                                {user && reto.completed ? (
+                                  <div className="bg-[#1e1e1e] text-xs text-green-400 px-2 py-1 rounded flex items-center">
+                                    <Terminal className="h-3 w-3 mr-1" />
+                                    <span className="font-mono">$ test: passed</span>
                                   </div>
                                 ) : (
-                                  <div className="flex items-center">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    {formatDate(reto.createdat)}
+                                  <div className="bg-[#1e1e1e] text-xs text-gray-300 px-2 py-1 rounded flex items-center">
+                                    <Terminal className="h-3 w-3 mr-1" />
+                                    <span className="font-mono">$ run test</span>
                                   </div>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                {reto.isDailyChallenge && (
-                                  <Badge className="bg-blue-500/20 text-blue-500 border-blue-500/20 flex items-center gap-1 text-xs">
-                                    <Calendar className="h-3 w-3" />
-                                    Diario
-                                  </Badge>
-                                )}
-                                {user && reto.completed && (
-                                  <Badge className="bg-primary/20 text-primary border-primary/20 flex items-center gap-1 text-xs">
-                                    <Trophy className="h-3 w-3" />
-                                    Completado
-                                  </Badge>
                                 )}
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -588,6 +749,8 @@ export default function RetosPage() {
             <div className="p-6 border-b border-border">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-bold flex items-center gap-2">
+                  <UserRound className="h-5 w-5 text-blue-500" />
+                  Iniciar sesión requerido
                   <UserRound className="h-5 w-5 text-blue-500" />
                   Iniciar sesión requerido
                 </h3>

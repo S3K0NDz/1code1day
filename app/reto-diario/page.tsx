@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-
 import { useState, useEffect, useRef } from "react"
 import Editor from "@monaco-editor/react"
 import { Button } from "@/components/ui/button"
@@ -19,6 +18,9 @@ import {
   Linkedin,
   Calendar,
   ArrowDown,
+  Terminal,
+  Code,
+  BookOpen,
 } from "lucide-react"
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
@@ -28,11 +30,12 @@ import { Toaster } from "@/components/ui/toaster"
 import { toast } from "@/components/ui/use-toast"
 import KeyboardHandler from "@/app/retos/[id]/keyboard-handler"
 import ClipboardHelper from "@/app/retos/[id]/clipboard-helper"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/utils/supabaseClient"
 import { saveCompletedChallenge } from "@/lib/db-functions"
+import { useMediaQuery } from "@/hooks/use-mobile"
 
 // Eliminar la declaración global de invertirPalabras
 declare global {
@@ -55,6 +58,8 @@ export default function RetoDiarioPage() {
   const editorRef = useRef<any>(null)
   const { user } = useAuth()
   const router = useRouter()
+  const isMobile = useMediaQuery("(max-width: 768px)")
+  const [fileName, setFileName] = useState("reto-diario.js")
 
   useEffect(() => {
     const fetchDailyChallenge = async () => {
@@ -113,6 +118,23 @@ export default function RetoDiarioPage() {
             console.error("Error parsing testCases:", e)
             testCases = []
           }
+
+          // Extraer el nombre de la función para el nombre del archivo
+          let extractedFunctionName = ""
+          try {
+            const functionMatch = dailyReto.initialcode?.match(/function\s+([a-zA-Z0-9_]+)\s*\(/i)
+            if (functionMatch && functionMatch[1]) {
+              extractedFunctionName = functionMatch[1]
+            }
+          } catch (e) {
+            console.error("Error extracting function name:", e)
+          }
+
+          const generatedFileName = extractedFunctionName
+            ? `${extractedFunctionName}.js`
+            : `reto-diario-${new Date().toISOString().split("T")[0]}.js`
+
+          setFileName(generatedFileName)
 
           // Actualizar el estado con los datos del reto
           setCode(dailyReto.initialcode || "")
@@ -192,6 +214,34 @@ export default function RetoDiarioPage() {
     return () => clearInterval(timer)
   }, [isLoading, hasStarted])
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (editorRef.current) {
+        editorRef.current.layout()
+      }
+    }
+
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
+
+  useEffect(() => {
+    if (!editorRef.current) return
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (editorRef.current) {
+        editorRef.current.layout()
+      }
+    })
+
+    const editorElement = document.querySelector(".monaco-editor")
+    if (editorElement) {
+      resizeObserver.observe(editorElement)
+    }
+
+    return () => resizeObserver.disconnect()
+  }, [editorRef.current])
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -210,7 +260,7 @@ export default function RetoDiarioPage() {
 
       // Capturar la salida de console.log
       console.log = (...args) => {
-        consoleOutput += args.join(" ") + "<br>"
+        consoleOutput += args.join(" ") + "\n"
         originalConsoleLog(...args)
       }
 
@@ -277,7 +327,7 @@ export default function RetoDiarioPage() {
       let consoleOutput = ""
       const originalConsoleLog = console.log
       console.log = (...args) => {
-        consoleOutput += args.join(" ") + "<br>"
+        consoleOutput += args.join(" ") + "\n"
         originalConsoleLog(...args)
       }
 
@@ -373,7 +423,7 @@ export default function RetoDiarioPage() {
 
       if (allTestsPassed) {
         setSuccess(true)
-        setOutput((prev) => prev + "<br>✅ ¡Felicidades! Todos los tests pasaron.")
+        setOutput((prev) => prev + "\n✅ ¡Felicidades! Todos los tests pasaron.")
         setTimeout(() => setShowSuccessModal(true), 1000)
 
         // Guardar la solución en la base de datos
@@ -399,7 +449,7 @@ export default function RetoDiarioPage() {
         }
       } else {
         setSuccess(false)
-        setOutput((prev) => prev + "<br>❌ Algunos tests fallaron.")
+        setOutput((prev) => prev + "\n❌ Algunos tests fallaron.")
       }
     } catch (error) {
       setOutput(`Error: ${error.message}`)
@@ -494,15 +544,16 @@ export default function RetoDiarioPage() {
   }
 
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "Fácil":
-        return "bg-green-500/20 text-green-500"
-      case "Intermedio":
-        return "bg-yellow-500/20 text-yellow-500"
-      case "Difícil":
-        return "bg-red-500/20 text-red-500"
-      default:
-        return "bg-blue-500/20 text-blue-500"
+    const lowerDifficulty = typeof difficulty === "string" ? difficulty.toLowerCase() : ""
+
+    if (lowerDifficulty.includes("fácil") || lowerDifficulty.includes("facil")) {
+      return "bg-green-500 text-white"
+    } else if (lowerDifficulty.includes("intermedio") || lowerDifficulty.includes("medio")) {
+      return "bg-orange-500 text-white"
+    } else if (lowerDifficulty.includes("difícil") || lowerDifficulty.includes("dificil")) {
+      return "bg-red-500 text-white"
+    } else {
+      return "bg-blue-500 text-white"
     }
   }
 
@@ -516,25 +567,40 @@ export default function RetoDiarioPage() {
     )
   }
 
-  return (
-    <InteractiveGridBackground>
-      <div className="min-h-screen flex flex-col">
-        <NavbarWithUser />
-        <main className="container mx-auto px-4 py-4 flex-1 flex flex-col">
-          <AnimatePresence mode="wait">
-            {!hasStarted ? (
-              <motion.div
-                key="description"
-                className="flex-1 flex flex-col"
-                initial={{ opacity: 1 }}
-                exit={{ opacity: 0, y: -50, transition: { duration: 0.5, ease: "easeInOut" } }}
-              >
-                <div className="bg-gradient-to-r from-primary/20 to-primary/5 border border-primary/20 rounded-lg p-8">
+  // Pantalla de inicio (descripción del reto)
+  if (!hasStarted) {
+    return (
+      <InteractiveGridBackground>
+        <div className="min-h-screen flex flex-col">
+          <NavbarWithUser />
+          <main className="container mx-auto px-4 py-4 flex-1 flex flex-col">
+            <motion.div
+              key="description"
+              className="flex-1 flex flex-col"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0, y: -50, transition: { duration: 0.5, ease: "easeInOut" } }}
+            >
+              <div className="bg-[#121212] rounded-lg overflow-hidden border border-gray-800 flex flex-col">
+                {/* Header con nombre de archivo */}
+                <div className="bg-[#1e1e1e] px-4 py-2 flex items-center justify-between border-b border-gray-800">
+                  <div className="flex items-center">
+                    <Code className="h-4 w-4 mr-2 text-gray-400" />
+                    <span className="text-sm text-gray-300 font-mono">reto-diario.js</span>
+                  </div>
+                  <div className="flex space-x-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                  </div>
+                </div>
+
+                {/* Cabecera del reto */}
+                <div className="p-6 border-b border-gray-800">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                     <div className="flex items-center mb-4 md:mb-0">
-                      <h1 className="text-2xl sm:text-3xl font-bold mr-3">Reto Diario</h1>
+                      <h1 className="text-2xl sm:text-3xl font-bold mr-3 text-white">Reto Diario</h1>
                       {dailyChallenge && (
-                        <Badge className={`${getDifficultyColor(dailyChallenge.difficulty)} text-sm px-3 py-1`}>
+                        <Badge className={`${getDifficultyColor(dailyChallenge.difficulty)}`}>
                           {dailyChallenge.difficulty}
                         </Badge>
                       )}
@@ -550,8 +616,8 @@ export default function RetoDiarioPage() {
                   </div>
                   {dailyChallenge ? (
                     <>
-                      <h2 className="text-4xl font-bold mb-4">{dailyChallenge.title}</h2>
-                      <div className="flex flex-wrap items-center text-muted-foreground mb-6 text-xs sm:text-sm gap-y-1">
+                      <h2 className="text-4xl font-bold mb-4 text-white">{dailyChallenge.title}</h2>
+                      <div className="flex flex-wrap items-center text-gray-400 mb-6 text-xs sm:text-sm gap-y-1">
                         <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
                         <span>{dailyChallenge.date}</span>
                         <span className="mx-2">•</span>
@@ -561,13 +627,13 @@ export default function RetoDiarioPage() {
                         <span className="mx-2">•</span>
                         <span>Éxito: {dailyChallenge.successRate}%</span>
                       </div>
-                      <div className="bg-black/20 p-6 rounded-lg">
-                        <p className="text-xl leading-relaxed">{dailyChallenge.description}</p>
+                      <div className="bg-[#1e1e1e] p-6 rounded-lg">
+                        <p className="text-xl leading-relaxed text-gray-300">{dailyChallenge.description}</p>
                       </div>
                       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
                         {dailyChallenge.examples.map((example, index) => (
-                          <div key={index} className="bg-black/30 p-4 rounded-md">
-                            <p className="text-sm font-mono mb-2 text-muted-foreground">Ejemplo {index + 1}:</p>
+                          <div key={index} className="bg-[#1e1e1e] p-4 rounded-md">
+                            <p className="text-sm font-mono mb-2 text-gray-400">Ejemplo {index + 1}:</p>
                             <p className="text-sm font-mono mb-1">
                               Entrada: <span className="text-green-400">{example.input}</span>
                             </p>
@@ -599,187 +665,505 @@ export default function RetoDiarioPage() {
                     </>
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-xl mb-4">No hay reto diario disponible</p>
+                      <p className="text-xl mb-4 text-white">No hay reto diario disponible</p>
                       <Link href="/retos">
                         <Button>Ver otros retos</Button>
                       </Link>
                     </div>
                   )}
                 </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="editor"
-                className="flex-1 flex flex-col"
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }}
-              >
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-4 bg-black/30 p-3 rounded-lg">
-                  <div className="flex items-center">
-                    <h2 className="text-lg font-bold mr-2">{dailyChallenge?.title}</h2>
-                    {dailyChallenge && (
-                      <Badge className={`${getDifficultyColor(dailyChallenge.difficulty)}`}>
-                        {dailyChallenge.difficulty}
-                      </Badge>
+              </div>
+            </motion.div>
+          </main>
+        </div>
+      </InteractiveGridBackground>
+    )
+  }
+
+  // Versión móvil con pestañas
+  if (isMobile) {
+    return (
+      <InteractiveGridBackground>
+        <div className="min-h-screen flex flex-col">
+          <NavbarWithUser />
+          <div className="container mx-auto px-4 py-4 flex-1 flex flex-col">
+            {/* Header con navegación */}
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-lg font-bold">Reto Diario</h1>
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-1.5 text-yellow-500" />
+                <span className="font-medium text-sm">{formatTime(remainingTime)}</span>
+              </div>
+            </div>
+
+            {/* Cabecera del reto */}
+            <div className="bg-[#121212] rounded-lg overflow-hidden border border-gray-800 mb-4">
+              <div className="bg-[#1e1e1e] px-4 py-2 flex items-center justify-between border-b border-gray-800">
+                <div className="flex items-center">
+                  <Code className="h-4 w-4 mr-2 text-gray-400" />
+                  <span className="text-sm text-gray-300 font-mono">{fileName}</span>
+                </div>
+              </div>
+              <div className="p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <h1 className="font-bold text-white text-lg">{dailyChallenge?.title}</h1>
+                  <Badge className={`${getDifficultyColor(dailyChallenge?.difficulty)} ml-2 shrink-0 text-xs`}>
+                    {dailyChallenge?.difficulty}
+                  </Badge>
+                </div>
+                <div className="flex items-center text-xs text-gray-400">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  <span>{dailyChallenge?.date}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabs for mobile */}
+            <Tabs defaultValue="editor" className="flex-1 flex flex-col">
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsTrigger value="editor">Editor</TabsTrigger>
+                <TabsTrigger value="descripcion">Descripción</TabsTrigger>
+                <TabsTrigger value="pistas">Pistas</TabsTrigger>
+              </TabsList>
+
+              {/* Editor tab with console below */}
+              <TabsContent value="editor" className="flex-1 flex flex-col space-y-4">
+                {/* Editor container */}
+                <div className="flex-1 min-h-[300px] border border-gray-800 rounded-md overflow-hidden bg-[#1e1e1e]">
+                  <div className="bg-[#1e1e1e] px-4 py-2 text-sm font-medium border-b border-gray-800 flex items-center">
+                    <BookOpen className="h-4 w-4 mr-2 text-gray-400" />
+                    <span className="text-gray-300">Editor</span>
+                  </div>
+                  <div style={{ height: "calc(100% - 40px)", minHeight: "260px" }}>
+                    <Editor
+                      height="100%"
+                      defaultLanguage="javascript"
+                      theme="vs-dark"
+                      value={code}
+                      onChange={(value) => setCode(value || "")}
+                      onMount={(editor) => {
+                        editorRef.current = editor
+                        // Force layout updates
+                        setTimeout(() => {
+                          editor.layout()
+                          const editorElement = editor.getDomNode()
+                          if (editorElement) {
+                            editorElement.style.height = "260px"
+                          }
+                        }, 100)
+                      }}
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                        lineNumbers: "on",
+                        scrollBeyondLastLine: false,
+                        folding: true,
+                        automaticLayout: true,
+                        wordWrap: "on",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Console below editor */}
+                <div className="h-[200px] border border-gray-800 rounded-md overflow-hidden bg-[#121212]">
+                  <div className="bg-[#1e1e1e] px-4 py-2 text-sm font-medium border-b border-gray-800 flex items-center">
+                    <Terminal className="h-4 w-4 mr-2 text-gray-400" />
+                    <span className="text-gray-300">Consola</span>
+                  </div>
+                  <div className="h-[calc(100%-40px)]">
+                    {isRunning ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent"></div>
+                      </div>
+                    ) : (
+                      <CodeOutput value={output || "Ejecuta tu código para ver los resultados"} height="100%" />
                     )}
                   </div>
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start sm:gap-4">
-                    <div className="flex items-center bg-black/50 px-3 py-1 rounded-md">
-                      <Clock className="h-4 w-4 mr-1.5 text-yellow-500" />
-                      <span className="font-medium">Tiempo: {formatTime(remainingTime)}</span>
+                </div>
+
+                {/* Action buttons */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" size="sm" onClick={resetCode}>
+                    <RefreshCw className="h-4 w-4 mr-1.5" />
+                    Reiniciar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={runCode} disabled={isRunning}>
+                    <Play className="h-4 w-4 mr-1.5" />
+                    Ejecutar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleCheckCode} disabled={isRunning}>
+                    <CheckCircle className="h-4 w-4 mr-1.5" />
+                    Comprobar
+                  </Button>
+                  <Button size="sm" onClick={handleSubmit} disabled={isRunning}>
+                    <Save className="h-4 w-4 mr-1.5" />
+                    Enviar
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {/* Description tab content */}
+              <TabsContent value="descripcion" className="flex-1 overflow-auto">
+                <div className="bg-[#121212] rounded-lg border border-gray-800 p-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h2 className="text-lg font-semibold mb-2 text-white">Descripción</h2>
+                      <p className="text-gray-400">{dailyChallenge?.description}</p>
                     </div>
-                    <div className="flex items-center bg-black/50 px-3 py-1 rounded-md">
-                      <Clock className="h-4 w-4 mr-1.5 text-blue-500" />
-                      <span className="font-medium text-xs sm:text-sm">
-                        Próximo: {timeUntilNextChallenge.hours.toString().padStart(2, "0")}:
-                        {timeUntilNextChallenge.minutes.toString().padStart(2, "0")}
-                      </span>
+
+                    <div>
+                      <h2 className="text-lg font-semibold mb-2 text-white">Ejemplos</h2>
+                      <div className="space-y-3">
+                        {dailyChallenge?.examples.map((example, index) => (
+                          <div key={index} className="bg-[#1e1e1e] p-3 rounded-md">
+                            <p className="text-sm font-mono mb-1.5 text-gray-300">Ejemplo {index + 1}:</p>
+                            <p className="text-sm font-mono mb-1">
+                              <span className="text-gray-400">Entrada:</span>{" "}
+                              <span className="text-green-400">{example.input}</span>
+                            </p>
+                            <p className="text-sm font-mono">
+                              <span className="text-gray-400">Salida:</span>
+                            </p>
+                            <p className="text-sm font-mono">
+                              <span className="text-blue-400">{example.output}</span>
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
-                <Tabs defaultValue="editor" className="flex-1 flex flex-col">
-                  <TabsList className="grid w-full grid-cols-3 mb-4">
-                    <TabsTrigger value="editor">Editor</TabsTrigger>
-                    <TabsTrigger value="descripcion">Descripción</TabsTrigger>
-                    <TabsTrigger value="pistas">Pistas</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="editor" className="flex-1 flex flex-col">
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 flex-1">
-                      <div className="lg:col-span-3 flex flex-col">
-                        <div className="editor-wrapper flex-1 rounded-md overflow-hidden border border-border">
-                          <Editor
-                            height="100%"
-                            defaultLanguage="javascript"
-                            language="javascript"
-                            theme="vs-dark"
-                            value={code}
-                            onChange={(value) => setCode(value || "")}
-                            onMount={(editor) => (editorRef.current = editor)}
-                            options={{
-                              minimap: { enabled: false },
-                              fontSize: 14,
-                              lineNumbers: "on",
-                              scrollBeyondLastLine: false,
-                              folding: true,
-                              automaticLayout: true,
-                            }}
-                          />
-                        </div>
-                        <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:justify-between">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={resetCode}
-                            className="w-full sm:w-auto mb-2 sm:mb-0"
-                          >
-                            <RefreshCw className="h-4 w-4 mr-1.5" />
-                            Reiniciar
-                          </Button>
-                          <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={runCode}
-                              disabled={isRunning}
-                              className="flex-1 sm:flex-none"
-                            >
-                              <Play className="h-4 w-4 mr-1.5" />
-                              Ejecutar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleCheckCode}
-                              disabled={isRunning}
-                              className="flex-1 sm:flex-none"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1.5" />
-                              Comprobar
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={handleSubmit}
-                              disabled={isRunning}
-                              className="w-full sm:w-auto mt-2 sm:mt-0"
-                            >
-                              <Save className="h-4 w-4 mr-1.5" />
-                              Enviar
-                            </Button>
+              </TabsContent>
+
+              {/* Hints tab content */}
+              <TabsContent value="pistas" className="flex-1 overflow-auto">
+                <div className="bg-[#121212] rounded-lg border border-gray-800 p-4">
+                  <div className="space-y-4">
+                    <h2 className="text-lg font-semibold mb-2 text-white">Pistas</h2>
+                    {dailyChallenge?.hints && dailyChallenge.hints.length > 0 ? (
+                      <div className="space-y-3">
+                        {dailyChallenge.hints.map((hint, index) => (
+                          <div key={index} className="bg-[#1e1e1e] p-3 rounded-md">
+                            <h3 className="font-medium mb-1 text-white">Pista {index + 1}</h3>
+                            <p className="text-gray-400">{hint}</p>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                      <div className="lg:col-span-2 flex flex-col">
-                        <div className="flex-1 border border-border rounded-md overflow-hidden bg-card/70">
-                          <div className="bg-muted px-4 py-2 text-sm font-medium border-b border-border">Consola</div>
-                          <div className="h-full">
-                            {isRunning ? (
-                              <div className="flex items-center justify-center h-full">
-                                <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent"></div>
-                              </div>
-                            ) : (
-                              <CodeOutput
-                                value={output || "Ejecuta tu código para ver los resultados"}
-                                height="400px"
-                              />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="descripcion" className="flex-1">
-                    {dailyChallenge && (
-                      <div className="border border-border bg-card/50 p-6 rounded-lg">
-                        <h2 className="text-xl font-semibold mb-4">{dailyChallenge.title}</h2>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          <Badge className={getDifficultyColor(dailyChallenge.difficulty)}>
-                            {dailyChallenge.difficulty}
-                          </Badge>
-                          <Badge variant="outline">{dailyChallenge.category}</Badge>
-                        </div>
-                        <div className="mb-6">
-                          <h3 className="text-lg font-semibold mb-2">Descripción</h3>
-                          <p className="text-muted-foreground">{dailyChallenge.description}</p>
-                        </div>
-                        <div className="mb-6">
-                          <h3 className="text-lg font-semibold mb-2">Ejemplos</h3>
-                          <div className="space-y-3">
-                            {dailyChallenge.examples.map((example, index) => (
-                              <div key={index} className="bg-secondary p-4 rounded-md">
-                                <p className="text-sm font-mono mb-2">Ejemplo {index + 1}:</p>
-                                <p className="text-sm font-mono mb-1">
-                                  Entrada: <span className="text-green-400">{example.input}</span>
-                                </p>
-                                <p className="text-sm font-mono">
-                                  Salida: <span className="text-blue-400">{example.output}</span>
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                    ) : (
+                      <p className="text-gray-400">No hay pistas disponibles para este reto.</p>
                     )}
-                  </TabsContent>
-                  <TabsContent value="pistas" className="flex-1">
-                    {dailyChallenge && (
-                      <div className="border border-border bg-card/50 p-6 rounded-lg">
-                        <h2 className="text-xl font-semibold mb-4">Pistas</h2>
-                        <p className="text-muted-foreground mb-6">Usa estas pistas si te quedas atascado</p>
-                        <div className="space-y-6">
-                          {dailyChallenge.hints.map((hint, index) => (
-                            <div key={index} className="bg-secondary/30 p-4 rounded-md">
-                              <h3 className="font-medium mb-2">Pista {index + 1}</h3>
-                              <p className="text-muted-foreground">{hint}</p>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {showSuccessModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+              <div className="bg-black border border-border rounded-lg max-w-lg w-full overflow-hidden">
+                <div className="p-4 border-b border-border flex justify-between items-center">
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-yellow-400" />
+                    ¡Reto completado!
+                  </h3>
+                  <button onClick={() => setShowSuccessModal(false)} className="text-muted-foreground hover:text-white">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="text-center">
+                    <div className="mb-4 text-base">
+                      ¡Felicidades, <span className="font-bold">{user?.email?.split("@")[0] || "usuario"}</span>!
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Has completado exitosamente el reto <span className="font-bold">{dailyChallenge?.title}</span>.
+                    </p>
+                  </div>
+                  <div className="relative border border-border rounded-lg overflow-hidden" id="share-card">
+                    <div className="p-4 flex flex-col items-center justify-center min-h-[180px]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Trophy className="h-6 w-6 text-yellow-400" />
+                        <span className="text-base font-semibold flex items-center gap-1">
+                          <span className="bg-white text-black px-2">1code</span>
+                          <span className="text-white">1day</span>
+                        </span>
+                      </div>
+                      <div className="text-center mb-4">
+                        <div className="text-lg font-bold mb-1">{user?.email?.split("@")[0] || "usuario"}</div>
+                        <div className="text-xs text-muted-foreground">ha completado el reto</div>
+                        <div className="text-lg font-bold mt-1">{dailyChallenge?.title}</div>
+                      </div>
+                      {dailyChallenge && (
+                        <div
+                          className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(dailyChallenge.difficulty)}`}
+                        >
+                          {dailyChallenge.difficulty}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
+                    <div className="flex justify-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleShare("twitter")}
+                        title="Compartir en Twitter"
+                      >
+                        <Twitter className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleShare("facebook")}
+                        title="Compartir en Facebook"
+                      >
+                        <Facebook className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleShare("linkedin")}
+                        title="Compartir en LinkedIn"
+                      >
+                        <Linkedin className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 border-t border-border flex flex-col gap-2">
+                  <Button variant="outline" onClick={() => setShowSuccessModal(false)}>
+                    Cerrar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <KeyboardHandler editorRef={editorRef} />
+          <ClipboardHelper editorRef={editorRef} />
+          <Toaster />
+        </div>
+      </InteractiveGridBackground>
+    )
+  }
+
+  // Versión desktop con layout de dos columnas
+  return (
+    <InteractiveGridBackground>
+      <div className="min-h-screen flex flex-col">
+        <NavbarWithUser />
+        <div className="container mx-auto px-4 py-4 flex-1 flex flex-col">
+          {/* Header con navegación */}
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-xl font-bold">Reto Diario</h1>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center bg-black/30 px-3 py-1 rounded-md">
+                <Clock className="h-4 w-4 mr-1.5 text-yellow-500" />
+                <span className="font-medium">Tiempo: {formatTime(remainingTime)}</span>
+              </div>
+              <div className="flex items-center bg-black/30 px-3 py-1 rounded-md">
+                <Clock className="h-4 w-4 mr-1.5 text-blue-500" />
+                <span className="font-medium text-xs sm:text-sm">
+                  Próximo: {timeUntilNextChallenge.hours.toString().padStart(2, "0")}:
+                  {timeUntilNextChallenge.minutes.toString().padStart(2, "0")}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Contenedor principal con grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 flex-1">
+            {/* Panel izquierdo: Descripción del reto con pestañas */}
+            <div className="lg:col-span-2 flex flex-col">
+              <div className="bg-[#121212] rounded-lg overflow-hidden border border-gray-800 flex flex-col h-full">
+                {/* Header con nombre de archivo */}
+                <div className="bg-[#1e1e1e] px-4 py-2 flex items-center justify-between border-b border-gray-800">
+                  <div className="flex items-center">
+                    <Code className="h-4 w-4 mr-2 text-gray-400" />
+                    <span className="text-sm text-gray-300 font-mono">{fileName}</span>
+                  </div>
+                  <div className="flex space-x-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                  </div>
+                </div>
+
+                {/* Cabecera del reto */}
+                <div className="p-4 border-b border-gray-800">
+                  <div className="flex justify-between items-start mb-3">
+                    <h1 className="font-bold text-white text-xl">{dailyChallenge?.title}</h1>
+                    <Badge className={`${getDifficultyColor(dailyChallenge?.difficulty)} ml-2 shrink-0`}>
+                      {dailyChallenge?.difficulty}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center text-sm text-gray-400">
+                    <Calendar className="h-4 w-4 mr-1.5" />
+                    <span>{dailyChallenge?.date}</span>
+                  </div>
+                </div>
+
+                {/* Tabs para escritorio */}
+                <Tabs defaultValue="description" className="flex-1 flex flex-col">
+                  <div className="border-b border-gray-800">
+                    <TabsList className="flex w-full bg-transparent p-0">
+                      <TabsTrigger
+                        value="description"
+                        className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
+                      >
+                        Descripción
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="hints"
+                        className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
+                      >
+                        Pistas
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  {/* Tab de descripción */}
+                  <TabsContent value="description" className="flex-1 overflow-auto p-4">
+                    <div className="space-y-4">
+                      <div>
+                        <h2 className="text-lg font-semibold mb-2 text-white">Descripción</h2>
+                        <p className="text-gray-400">{dailyChallenge?.description}</p>
+                      </div>
+
+                      <div>
+                        <h2 className="text-lg font-semibold mb-2 text-white">Ejemplos</h2>
+                        <div className="space-y-3">
+                          {dailyChallenge?.examples.map((example, index) => (
+                            <div key={index} className="bg-[#1e1e1e] p-3 rounded-md">
+                              <p className="text-sm font-mono mb-1.5 text-gray-300">Ejemplo {index + 1}:</p>
+                              <p className="text-sm font-mono mb-1">
+                                <span className="text-gray-400">Entrada:</span>
+                                <span className="text-green-400">{example.input}</span>
+                              </p>
+                              <p className="text-sm font-mono">
+                                <span className="text-gray-400">Salida:</span>
+                                <span className="text-blue-400">{example.output}</span>
+                              </p>
                             </div>
                           ))}
                         </div>
                       </div>
-                    )}
+                    </div>
+                  </TabsContent>
+
+                  {/* Tab de pistas */}
+                  <TabsContent value="hints" className="flex-1 overflow-auto p-4">
+                    <div className="space-y-4">
+                      <h2 className="text-lg font-semibold mb-2 text-white">Pistas</h2>
+                      {dailyChallenge?.hints && dailyChallenge.hints.length > 0 ? (
+                        <div className="space-y-3">
+                          {dailyChallenge.hints.map((hint, index) => (
+                            <div key={index} className="bg-[#1e1e1e] p-3 rounded-md">
+                              <h3 className="font-medium mb-1 text-white">Pista {index + 1}</h3>
+                              <p className="text-gray-400">{hint}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-400">No hay pistas disponibles para este reto.</p>
+                      )}
+                    </div>
                   </TabsContent>
                 </Tabs>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Panel derecho: Editor y consola */}
+            <div className="lg:col-span-3 flex flex-col">
+              <div className="flex flex-col h-full gap-4">
+                {/* Editor de código */}
+                <div className="flex-1 border border-gray-800 rounded-md overflow-hidden bg-[#1e1e1e] min-h-[500px]">
+                  <div className="bg-[#1e1e1e] px-4 py-2 text-sm font-medium border-b border-gray-800 flex items-center">
+                    <BookOpen className="h-4 w-4 mr-2 text-gray-400" />
+                    <span className="text-gray-300">Editor</span>
+                  </div>
+                  <div className="h-[calc(100%-40px)]">
+                    <Editor
+                      height="100%"
+                      defaultLanguage="javascript"
+                      theme="vs-dark"
+                      value={code}
+                      onChange={(value) => setCode(value || "")}
+                      onMount={(editor) => {
+                        editorRef.current = editor
+                      }}
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                        lineNumbers: "on",
+                        scrollBeyondLastLine: false,
+                        folding: true,
+                        automaticLayout: true,
+                        wordWrap: "on",
+                        formatOnPaste: true,
+                        formatOnType: true,
+                        suggestOnTriggerCharacters: true,
+                        acceptSuggestionOnEnter: "smart",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Consola de salida */}
+                <div className="h-64 border border-gray-800 rounded-md overflow-hidden bg-[#121212]">
+                  <div className="bg-[#1e1e1e] px-4 py-2 text-sm font-medium border-b border-gray-800 flex items-center">
+                    <Terminal className="h-4 w-4 mr-2 text-gray-400" />
+                    <span className="text-gray-300">Consola</span>
+                  </div>
+                  <div className="h-[calc(100%-40px)]">
+                    {isRunning ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent"></div>
+                      </div>
+                    ) : (
+                      <CodeOutput value={output || "Ejecuta tu código para ver los resultados"} height="100%" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Barra de acciones */}
+                <div className="flex flex-wrap gap-2 justify-end">
+                  <Button variant="outline" size="sm" onClick={resetCode} className="flex-1 sm:flex-none">
+                    <RefreshCw className="h-4 w-4 mr-1.5" />
+                    Reiniciar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={runCode}
+                    disabled={isRunning}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <Play className="h-4 w-4 mr-1.5" />
+                    Ejecutar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCheckCode}
+                    disabled={isRunning}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1.5" />
+                    Comprobar
+                  </Button>
+                  <Button size="sm" onClick={handleSubmit} disabled={isRunning} className="flex-1 sm:flex-none">
+                    <Save className="h-4 w-4 mr-1.5" />
+                    Enviar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {showSuccessModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
@@ -789,7 +1173,7 @@ export default function RetoDiarioPage() {
                     <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
                     ¡Reto completado!
                   </h3>
-                  <button onClick={() => setShowSuccessModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <button onClick={() => setShowSuccessModal(false)} className="text-muted-foreground hover:text-white">
                     <X className="h-4 w-4 sm:h-5 sm:w-5" />
                   </button>
                 </div>
@@ -798,7 +1182,7 @@ export default function RetoDiarioPage() {
                     <div className="mb-4 text-base sm:text-lg">
                       ¡Felicidades, <span className="font-bold">{user?.email?.split("@")[0] || "usuario"}</span>!
                     </div>
-                    <p className="text-muted-foreground text-sm sm:text-base">
+                    <p className="text-sm sm:text-base text-muted-foreground">
                       Has completado exitosamente el reto <span className="font-bold">{dailyChallenge?.title}</span>.
                     </p>
                   </div>
@@ -815,7 +1199,7 @@ export default function RetoDiarioPage() {
                         <div className="text-lg sm:text-xl font-bold mb-1">
                           {user?.email?.split("@")[0] || "usuario"}
                         </div>
-                        <div className="text-muted-foreground text-sm">ha completado el reto</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">ha completado el reto</div>
                         <div className="text-lg sm:text-xl font-bold mt-1">{dailyChallenge?.title}</div>
                       </div>
                       {dailyChallenge && (
@@ -828,7 +1212,7 @@ export default function RetoDiarioPage() {
                     </div>
                   </div>
                   <div className="text-center">
-                    <p className="text-muted-foreground mb-4 text-sm">¡Comparte tu logro con el mundo!</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
                     <div className="flex justify-center gap-3">
                       <Button
                         variant="outline"
@@ -857,9 +1241,18 @@ export default function RetoDiarioPage() {
                     </div>
                   </div>
                 </div>
-                <div className="p-4 border-t border-border flex justify-between">
-                  <Button variant="outline" onClick={() => setShowSuccessModal(false)} className="w-full">
+                <div className="p-4 border-t border-border flex flex-col sm:flex-row gap-2 sm:gap-0 sm:justify-between">
+                  <Button variant="outline" onClick={() => setShowSuccessModal(false)} className="w-full sm:w-auto">
                     Cerrar
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowSuccessModal(false)
+                      router.push("/retos")
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    Explorar más retos
                   </Button>
                 </div>
               </div>
@@ -869,7 +1262,7 @@ export default function RetoDiarioPage() {
           <KeyboardHandler editorRef={editorRef} />
           <ClipboardHelper editorRef={editorRef} />
           <Toaster />
-        </main>
+        </div>
       </div>
     </InteractiveGridBackground>
   )

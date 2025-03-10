@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Loader2 } from "lucide-react"
+import { ArrowRight, Loader2, Code, Terminal, Calendar, Play, UserPlus, Check, X } from "lucide-react"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { JavaScriptLogo } from "@/components/javascript-logo"
 import { supabase } from "@/lib/supabase"
+import { AnimatedLogo } from "@/components/animated-logo"
 
 export default function Home() {
   const [stats, setStats] = useState({
@@ -17,11 +18,8 @@ export default function Home() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        // Obtener el conteo de retos publicados
         const { count, error } = await supabase.from("retos").select("id", { count: "exact" }).eq("published", true)
-
         if (error) throw error
-
         setStats({
           totalRetos: count || 0,
           isLoading: false,
@@ -31,7 +29,6 @@ export default function Home() {
         setStats((prev) => ({ ...prev, isLoading: false }))
       }
     }
-
     fetchStats()
   }, [])
 
@@ -39,169 +36,374 @@ export default function Home() {
     <InteractiveGridBackground>
       <main className="min-h-screen">
         <div className="container mx-auto px-4 py-8 sm:py-16 max-w-7xl">
-          {/* Header */}
+          {/* Header con logo animado */}
           <header className="flex justify-center mb-8 sm:mb-16">
-            <div className="flex items-center">
-              <div className="bg-white text-black px-3 py-1 sm:px-4 sm:py-2 text-2xl sm:text-3xl font-bold">1code</div>
-              <div className="text-white text-2xl sm:text-3xl font-bold px-1 sm:px-2">1day</div>
-            </div>
+            <AnimatedLogo />
           </header>
 
           {/* Hero Section */}
-          <div className="text-center mb-16 sm:mb-24">
-            <div className="flex flex-col items-center mb-6">
-              <div className="flex flex-col sm:flex-row items-center gap-3 mb-2 px-4">
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight text-center sm:text-left">
-                  La plataforma de retos diarios de programación
-                </h1>
-                <JavaScriptLogo size={56} className="mt-1" />
+          <div className="mb-16 sm:mb-24">
+            <div className="bg-[#121212] border border-gray-800 rounded-lg overflow-hidden">
+              {/* macOS window header */}
+              <div className="bg-[#1e1e1e] px-4 py-2 flex items-center justify-between border-b border-gray-800">
+                <div className="flex items-center">
+                  <Code className="h-4 w-4 mr-2 text-gray-400" />
+                  <span className="text-sm text-gray-300 font-mono">index.js</span>
+                </div>
+                <div className="flex space-x-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
               </div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-yellow-400">JavaScript</h2>
-            </div>
-            <p className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto px-4">
-              Mejora tus habilidades de JavaScript con un nuevo desafío cada día. Aprende, practica y crece como
-              desarrollador.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10 px-4">
-              <Link href="/reto-diario" className="w-full sm:w-auto">
-                <Button size="lg" className="group w-full">
-                  Comenzar ahora
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition" />
-                </Button>
-              </Link>
-              <Link href="/registro" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="group w-full">
-                  Registrarse
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition" />
-                </Button>
-              </Link>
+
+              <div className="p-4 sm:p-6">
+                <div className="text-green-400 font-mono text-sm mb-4">// Bienvenido a 1code1day</div>
+
+                <div className="flex items-center mb-6">
+                  <JavaScriptLogo size={32} className="mr-3" />
+                  <div className="text-sm sm:text-base font-mono overflow-x-auto whitespace-nowrap">
+                    <span className="text-blue-400">import</span>
+                    <span className="text-white mx-1">*</span>
+                    <span className="text-blue-400">as</span>
+                    <span className="text-yellow-300 ml-1">JavaScript</span>
+                    <span className="text-white ml-1">from</span>
+                    <span className="text-green-300 ml-1">'1code1day'</span>
+                  </div>
+                </div>
+
+                <div className="mb-6 space-y-2 font-mono text-sm sm:text-base">
+                  <div className="flex flex-wrap items-baseline gap-1">
+                    <span className="text-blue-400">const</span>
+                    <span className="text-yellow-300">plataforma</span>
+                    <span className="text-white">=</span>
+                    <span className="text-white">{"{"}</span>
+                  </div>
+                  <div className="pl-4 space-y-1">
+                    <div className="flex flex-wrap gap-1">
+                      <span className="text-purple-400">nombre:</span>
+                      <span className="text-green-300 break-all">
+                        "La plataforma de retos diarios de programación",
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      <span className="text-purple-400">lenguaje:</span>
+                      <span className="text-green-300">"JavaScript",</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      <span className="text-purple-400">descripción:</span>
+                      <span className="text-green-300 break-all">
+                        "Mejora tus habilidades con un nuevo desafío cada día"
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-white">{"}"}</div>
+                </div>
+
+                <div className="bg-[#1e1e1e] p-3 rounded mb-6">
+                  <div className="flex items-center text-sm sm:text-base font-mono">
+                    <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                    <span className="text-blue-400">const</span>
+                    <span className="text-yellow-300 ml-1">fechaActual</span>
+                    <span className="text-white ml-1">=</span>
+                    <span className="text-green-300 ml-1">"{new Date().toISOString().split("T")[0]}"</span>
+                  </div>
+                </div>
+
+                <div className="text-green-400 font-mono text-sm mb-4">// Funciones disponibles:</div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Link href="/reto-diario" className="block">
+                    <div className="bg-[#2a2a2a] hover:bg-[#333] transition-colors p-3 rounded border border-blue-600/30 group">
+                      <div className="flex items-center text-sm">
+                        <Play className="h-4 w-4 mr-2 text-blue-400" />
+                        <span className="text-blue-400 font-mono">function</span>
+                        <span className="text-yellow-300 font-mono ml-1">comenzarAhora()</span>
+                      </div>
+                      <div className="pl-6 py-1 text-gray-300 font-mono text-xs">// Inicia tu reto diario</div>
+                      <div className="flex justify-end">
+                        <ArrowRight className="h-4 w-4 text-blue-400 group-hover:translate-x-1 transition" />
+                      </div>
+                    </div>
+                  </Link>
+
+                  <Link href="/registro" className="block">
+                    <div className="bg-[#2a2a2a] hover:bg-[#333] transition-colors p-3 rounded border border-gray-600/30 group">
+                      <div className="flex items-center text-sm">
+                        <UserPlus className="h-4 w-4 mr-2 text-gray-400" />
+                        <span className="text-blue-400 font-mono">function</span>
+                        <span className="text-yellow-300 font-mono ml-1">registrarse()</span>
+                      </div>
+                      <div className="pl-6 py-1 text-gray-300 font-mono text-xs">// Crea tu cuenta</div>
+                      <div className="flex justify-end">
+                        <ArrowRight className="h-4 w-4 text-gray-400 group-hover:translate-x-1 transition" />
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Sección de estadísticas con datos reales - MOVIDA ARRIBA */}
-          <div className="mb-16 sm:mb-24 py-12 sm:py-16 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
-            <div className="max-w-5xl mx-auto text-center">
-              <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Nuestra biblioteca de retos</h2>
-
-              {stats.isLoading ? (
-                <div className="flex justify-center items-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-yellow-400" />
-                  <span className="ml-3 text-lg">Cargando...</span>
+          {/* Stats Section */}
+          <div className="mb-16 sm:mb-24">
+            <div className="bg-[#121212] border border-gray-800 rounded-lg overflow-hidden">
+              <div className="bg-[#1e1e1e] px-4 py-2 flex items-center justify-between border-b border-gray-800">
+                <div className="flex items-center">
+                  <Terminal className="h-4 w-4 mr-2 text-gray-400" />
+                  <span className="text-sm text-gray-300 font-mono">stats.js</span>
                 </div>
-              ) : (
-                <div className="py-8 px-4">
-                  <div className="text-5xl sm:text-6xl font-bold text-yellow-400 mb-4">{stats.totalRetos}</div>
-                  <h3 className="text-xl sm:text-2xl font-medium mb-3">Retos de JavaScript</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto px-2">
-                    Desde manipulación del DOM hasta algoritmos avanzados y patrones de diseño. Practica con nuestra
-                    amplia colección de desafíos para todos los niveles.
+                <div className="flex space-x-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-6">
+                <div className="text-green-400 font-mono text-sm mb-4">// Biblioteca de retos</div>
+
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl sm:text-3xl font-bold mb-6">Nuestra biblioteca de retos</h2>
+                </div>
+
+                {stats.isLoading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-yellow-400" />
+                    <span className="ml-3 text-lg">Cargando...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="bg-[#1e1e1e] p-4 rounded-lg border border-gray-700">
+                      <div className="font-mono text-sm sm:text-base space-y-2">
+                        <div className="text-blue-400">const stats = {"{"}</div>
+                        <div className="pl-4">
+                          <div className="text-purple-400">
+                            totalRetos: <span className="text-yellow-300">{stats.totalRetos}</span>,
+                          </div>
+                          <div className="text-purple-400">
+                            lenguaje: <span className="text-green-300">"JavaScript"</span>,
+                          </div>
+                          <div className="text-purple-400">
+                            actualizado:{" "}
+                            <span className="text-green-300">"{new Date().toISOString().split("T")[0]}"</span>
+                          </div>
+                        </div>
+                        <div className="text-blue-400">{"}"}</div>
+                      </div>
+                    </div>
+
+                    <div className="text-center px-4">
+                      <h3 className="text-xl sm:text-2xl font-medium mb-3">Retos de JavaScript</h3>
+                      <p className="text-sm sm:text-base text-muted-foreground mb-6">
+                        Desde manipulación del DOM hasta algoritmos avanzados y patrones de diseño. Practica con nuestra
+                        amplia colección de desafíos para todos los niveles.
+                      </p>
+
+                      <Link href="/retos">
+                        <div className="inline-block bg-[#2a2a2a] hover:bg-[#333] transition-colors p-3 rounded border border-blue-600/30 group">
+                          <div className="flex items-center text-sm">
+                            <Code className="h-4 w-4 mr-2 text-blue-400" />
+                            <span className="text-blue-400 font-mono">function</span>
+                            <span className="text-yellow-300 font-mono ml-1">explorarRetos()</span>
+                            <ArrowRight className="ml-2 h-4 w-4 text-blue-400 group-hover:translate-x-1 transition" />
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing Section - Actualizada */}
+          <section className="my-16 sm:my-32">
+            <div className="bg-[#121212] rounded-lg border border-gray-800 overflow-hidden">
+              {/* macOS window header */}
+              <div className="bg-[#1e1e1e] px-4 py-2 flex items-center justify-between border-b border-gray-800">
+                <div className="flex items-center">
+                  <Code className="h-4 w-4 mr-2 text-gray-400" />
+                  <span className="text-sm text-gray-300 font-mono">pricing.js</span>
+                </div>
+                <div className="flex space-x-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+              </div>
+
+              <div className="p-6 sm:p-8">
+                <div className="text-green-400 font-mono text-sm mb-4">// Planes de suscripción</div>
+
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 sm:mb-6 text-white">
+                    Planes de Suscripción
+                  </h2>
+                  <p className="text-center text-sm sm:text-base text-muted-foreground mb-8 max-w-3xl mx-auto">
+                    Elige el plan que mejor se adapte a tus necesidades para dominar JavaScript
                   </p>
+                </div>
 
-                  <div className="mt-8">
-                    <Link href="/retos" className="w-full sm:w-auto inline-block">
-                      <Button size="lg" className="w-full sm:w-auto">
-                        Explorar todos los retos
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
+                  {/* Free Plan */}
+                  <div className="bg-[#1a1a1a] rounded-lg border-2 border-gray-800 overflow-hidden">
+                    {/* Barra superior estilo editor de código */}
+                    <div className="flex items-center justify-between bg-black/80 px-4 py-2">
+                      <div className="flex items-center">
+                        <Terminal className="h-4 w-4 mr-2 text-white" />
+                        <span className="text-xs text-white">plan-gratis.js</span>
+                      </div>
+                      <div className="flex space-x-1.5">
+                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      </div>
+                    </div>
 
-          {/* Pricing Section */}
-          <section className="my-16 sm:my-32 px-4">
-            <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 sm:mb-6">Planes de Suscripción</h2>
-            <p className="text-center text-sm sm:text-base text-muted-foreground mb-8 sm:mb-16 max-w-3xl mx-auto">
-              Elige el plan que mejor se adapte a tus necesidades para dominar JavaScript
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
-              {/* Free Plan */}
-              <div className="border border-border bg-card/50 p-6 sm:p-8 rounded-lg hover:border-primary/50 transition-colors duration-300 flex flex-col">
-                <div className="flex-grow">
-                  <h3 className="text-xl sm:text-2xl font-bold mb-2">Gratis</h3>
-                  <p className="text-muted-foreground mb-4">Comienza tu viaje de programación</p>
-                  <div className="mb-6">
-                    <span className="text-3xl sm:text-4xl font-bold">€0</span>
-                    <span className="text-muted-foreground">/para siempre</span>
-                  </div>
-                  <ul className="space-y-3 mb-8">
-                    <li className="flex items-center">
-                      <span className="mr-2">✓</span>
-                      <span>1 reto diario</span>
-                    </li>
-                    <li className="flex items-center">
-                      <span className="mr-2">✓</span>
-                      <span>Editor de código básico</span>
-                    </li>
-                    <li className="flex items-center">
-                      <span className="mr-2">✓</span>
-                      <span>Acceso a comunidad</span>
-                    </li>
-                    <li className="flex items-center text-muted-foreground">
-                      <span className="mr-2">✗</span>
-                      <span>Sin acceso a retos anteriores</span>
-                    </li>
-                  </ul>
-                </div>
-                <Link href="/registro" className="w-full">
-                  <Button className="w-full mt-auto">Comenzar Gratis</Button>
-                </Link>
-              </div>
+                    {/* Contenido principal */}
+                    <div className="p-6">
+                      {/* Encabezado con nombre del plan */}
+                      <div className="mb-4">
+                        <div className="flex items-center mb-2">
+                          <Code className="h-5 w-5 text-primary mr-2" />
+                          <h3 className="text-xl font-bold">Gratis</h3>
+                        </div>
+                        <p className="text-muted-foreground text-sm">Comienza tu viaje de programación</p>
+                      </div>
 
-              {/* Premium Plan */}
-              <div className="border border-primary bg-card/80 p-6 sm:p-8 rounded-lg shadow-lg flex flex-col relative overflow-hidden">
-                <div className="absolute top-0 right-0">
-                  <div className="bg-blue-600 text-white text-xs sm:text-sm font-medium px-2 sm:px-4 py-1 rounded-md shadow-md">
-                    Recomendado
+                      {/* Precio */}
+                      <div className="bg-black/10 p-3 rounded-md mb-4">
+                        <div className="flex items-baseline">
+                          <span className="text-2xl font-bold">€0</span>
+                          <span className="text-muted-foreground ml-2 text-sm">para siempre</span>
+                        </div>
+                      </div>
+
+                      {/* Características */}
+                      <div className="mb-4">
+                        <div className="flex items-center mb-2">
+                          <span className="text-blue-500 text-sm mr-2">// Incluye:</span>
+                        </div>
+                        <ul className="space-y-1 text-sm">
+                          <li className="flex items-start">
+                            <Check className="h-4 w-4 text-green-500 mr-2 shrink-0 mt-0.5" />
+                            <span>1 reto diario</span>
+                          </li>
+                          <li className="flex items-start">
+                            <Check className="h-4 w-4 text-green-500 mr-2 shrink-0 mt-0.5" />
+                            <span>Editor de código básico</span>
+                          </li>
+                          <li className="flex items-start">
+                            <X className="h-4 w-4 text-red-500 mr-2 shrink-0 mt-0.5" />
+                            <span className="text-muted-foreground">Sin acceso a retos anteriores</span>
+                          </li>
+                        </ul>
+                      </div>
+
+                      {/* Botón de acción */}
+                      <Link href="/registro" className="w-full">
+                        <Button variant="outline" className="w-full">
+                          Comenzar Gratis
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Premium Plan */}
+                  <div className="bg-[#1a1a1a] rounded-lg border-2 border-primary overflow-hidden relative">
+                    {/* Etiqueta de recomendado */}
+                    <div className="absolute top-0 right-0">
+                      <div className="bg-primary/20 text-primary text-xs font-medium px-2 py-1 rounded-bl-lg">
+                        Recomendado
+                      </div>
+                    </div>
+
+                    {/* Barra superior estilo editor de código */}
+                    <div className="flex items-center justify-between bg-black/80 px-4 py-2">
+                      <div className="flex items-center">
+                        <Terminal className="h-4 w-4 mr-2 text-white" />
+                        <span className="text-xs text-white">plan-premium.js</span>
+                      </div>
+                      <div className="flex space-x-1.5">
+                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      </div>
+                    </div>
+
+                    {/* Contenido principal */}
+                    <div className="p-6">
+                      {/* Encabezado con nombre del plan */}
+                      <div className="mb-4">
+                        <div className="flex items-center mb-2">
+                          <Code className="h-5 w-5 text-primary mr-2" />
+                          <h3 className="text-xl font-bold">Premium</h3>
+                        </div>
+                        <p className="text-muted-foreground text-sm">Acceso completo a todas las funciones</p>
+                      </div>
+
+                      {/* Precio */}
+                      <div className="bg-black/10 p-3 rounded-md mb-4">
+                        <div className="flex items-baseline">
+                          <span className="text-2xl font-bold">€5</span>
+                          <span className="text-muted-foreground ml-2 text-sm">por mes</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">o €4/mes facturado anualmente</p>
+                      </div>
+
+                      {/* Características */}
+                      <div className="mb-4">
+                        <div className="flex items-center mb-2">
+                          <span className="text-blue-500 text-sm mr-2">// Incluye:</span>
+                        </div>
+                        <ul className="space-y-1 text-sm">
+                          <li className="flex items-start">
+                            <Check className="h-4 w-4 text-green-500 mr-2 shrink-0 mt-0.5" />
+                            <span>Todos los retos diarios</span>
+                          </li>
+                          <li className="flex items-start">
+                            <Check className="h-4 w-4 text-green-500 mr-2 shrink-0 mt-0.5" />
+                            <span>Acceso a todos los retos anteriores</span>
+                          </li>
+                          <li className="flex items-start">
+                            <Check className="h-4 w-4 text-green-500 mr-2 shrink-0 mt-0.5" />
+                            <span>Editor de código avanzado</span>
+                          </li>
+                        </ul>
+                      </div>
+
+                      {/* Botón de acción */}
+                      <Link href="/checkout?plan=premium&billing=monthly" className="w-full">
+                        <Button className="w-full bg-primary hover:bg-primary/90">Suscribirse</Button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
-                <div className="flex-grow">
-                  <h3 className="text-xl sm:text-2xl font-bold mb-2">Premium</h3>
-                  <p className="text-muted-foreground mb-4">Acceso completo a todas las funciones</p>
-                  <div className="mb-6">
-                    <span className="text-3xl sm:text-4xl font-bold">€5</span>
-                    <span className="text-muted-foreground">/mes</span>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">o €4/mes facturado anualmente</p>
-                  </div>
-                  <ul className="space-y-3 mb-8">
-                    <li className="flex items-center">
-                      <span className="mr-2">✓</span>
-                      <span>Todos los retos diarios</span>
-                    </li>
-                    <li className="flex items-center">
-                      <span className="mr-2">✓</span>
-                      <span>Acceso a todos los retos anteriores</span>
-                    </li>
-                    <li className="flex items-center">
-                      <span className="mr-2">✓</span>
-                      <span>Editor de código avanzado</span>
-                    </li>
-                    <li className="flex items-center">
-                      <span className="mr-2">✓</span>
-                      <span>Soluciones explicadas</span>
-                    </li>
-                    <li className="flex items-center">
-                      <span className="mr-2">✓</span>
-                      <span>Estadísticas personales</span>
-                    </li>
-                  </ul>
+
+                <div className="text-center mt-8">
+                  <Link href="/planes" className="inline-flex items-center text-primary hover:underline">
+                    <span>Ver todos los detalles de los planes</span>
+                    <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
                 </div>
-                <Link href="/checkout?plan=premium&billing=monthly" className="w-full">
-                  <Button className="w-full mt-auto">Suscribirse</Button>
-                </Link>
               </div>
             </div>
           </section>
 
           {/* Footer simplificado con logo y redes sociales */}
-          <footer className="mt-16 sm:mt-24 mb-8 border-t border-border pt-8 sm:pt-12">
+          <footer className="mt-16 sm:mt-24 mb-8 border-t border-gray-800 pt-8 sm:pt-12">
             <div className="flex flex-col items-center justify-center">
               {/* Logo */}
               <div className="flex items-center mb-6 sm:mb-8">
                 <div className="bg-white text-black px-2 py-1 sm:px-3 sm:py-1 text-lg sm:text-xl font-bold">1code</div>
                 <div className="text-white text-lg sm:text-xl font-bold px-1">1day</div>
+              </div>
+
+              {/* Terminal-style date */}
+              <div className="bg-[#1e1e1e] flex items-center px-3 py-1.5 rounded mb-6 text-gray-300">
+                <Terminal className="h-4 w-4 mr-2" />
+                <span className="font-mono text-sm">© {new Date().getFullYear()} 1code1day</span>
               </div>
 
               {/* Redes sociales */}
