@@ -35,7 +35,7 @@ import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/utils/supabaseClient"
 import { saveCompletedChallenge } from "@/lib/db-functions"
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile"
 
 // Eliminar la declaración global de invertirPalabras
 declare global {
@@ -63,7 +63,7 @@ export default function RetoDiarioPage() {
   const editorRef = useRef<any>(null)
   const { user } = useAuth()
   const router = useRouter()
-  const isMobile = useMobile("(max-width: 768px)")
+  const isMobile = false;
   const [fileName, setFileName] = useState("reto-diario.js")
 
   useEffect(() => {
