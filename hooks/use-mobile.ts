@@ -2,20 +2,29 @@
 
 import { useState, useEffect } from "react"
 
-export const useMediaQuery = (query: string): boolean => {
+// Named export
+export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false)
 
   useEffect(() => {
+    // Check if window is defined (client-side)
+    if (typeof window === "undefined") {
+      return
+    }
+
     const mediaQuery = window.matchMedia(query)
 
     const handleChange = (event: MediaQueryListEvent) => {
       setMatches(event.matches)
     }
 
+    // Set initial value
     setMatches(mediaQuery.matches)
 
+    // Add event listener
     mediaQuery.addEventListener("change", handleChange)
 
+    // Clean up
     return () => {
       mediaQuery.removeEventListener("change", handleChange)
     }
@@ -24,6 +33,6 @@ export const useMediaQuery = (query: string): boolean => {
   return matches
 }
 
-// Also export as default for backward compatibility
+// Default export (same function)
 export default useMediaQuery
 

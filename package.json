@@ -69,7 +69,9 @@
     "openai": "latest",
     "@supabase/auth-helpers-nextjs": "latest",
     "@stripe/stripe-js": "latest",
-    "@monaco-editor/react": "latest"
+    "https:": "latest",
+    "@monaco-editor/react": "latest",
+    "framer-motion": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
