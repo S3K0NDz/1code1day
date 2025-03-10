@@ -54,7 +54,12 @@ export default function RetoDiarioPage() {
   const [success, setSuccess] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [timeUntilNextChallenge, setTimeUntilNextChallenge] = { hours: 0, minutes: 0, seconds: 0 }
+
+  // Use separate states for hours, minutes, and seconds instead of an object
+  const [nextHours, setNextHours] = useState(0)
+  const [nextMinutes, setNextMinutes] = useState(0)
+  const [nextSeconds, setNextSeconds] = useState(0)
+
   const editorRef = useRef<any>(null)
   const { user } = useAuth()
   const router = useRouter()
@@ -197,7 +202,10 @@ export default function RetoDiarioPage() {
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
       const seconds = Math.floor((diff % (1000 * 60)) / 1000)
 
-      setTimeUntilNextChallenge({ hours, minutes, seconds })
+      // Update separate states
+      setNextHours(hours)
+      setNextMinutes(minutes)
+      setNextSeconds(seconds)
     }
 
     calculateTimeUntilNextChallenge()
@@ -608,9 +616,8 @@ export default function RetoDiarioPage() {
                     <div className="flex items-center bg-black/30 px-4 py-2 rounded-md text-sm sm:text-base">
                       <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-500" />
                       <span className="font-medium">
-                        Próximo reto: {timeUntilNextChallenge.hours.toString().padStart(2, "0")}:
-                        {timeUntilNextChallenge.minutes.toString().padStart(2, "0")}:
-                        {timeUntilNextChallenge.seconds.toString().padStart(2, "0")}
+                        Próximo reto: {nextHours.toString().padStart(2, "0")}:{nextMinutes.toString().padStart(2, "0")}:
+                        {nextSeconds.toString().padStart(2, "0")}
                       </span>
                     </div>
                   </div>
@@ -967,8 +974,8 @@ export default function RetoDiarioPage() {
               <div className="flex items-center bg-black/30 px-3 py-1 rounded-md">
                 <Clock className="h-4 w-4 mr-1.5 text-blue-500" />
                 <span className="font-medium text-xs sm:text-sm">
-                  Próximo: {timeUntilNextChallenge.hours.toString().padStart(2, "0")}:
-                  {timeUntilNextChallenge.minutes.toString().padStart(2, "0")}
+                  Próximo: {nextHours.toString().padStart(2, "0")}:{nextMinutes.toString().padStart(2, "0")}:
+                  {nextSeconds.toString().padStart(2, "0")}
                 </span>
               </div>
             </div>
