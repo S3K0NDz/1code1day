@@ -42,7 +42,7 @@ export default function RetoPage() {
   // State and hooks remain the same
   const params = useParams()
   const id = params?.id as string
-  const isMobile = false;
+  const isMobile = typeof window !== "undefined" && (window.innerWidth <= 768 || (window.innerWidth >= 768 && window.innerWidth <= 1024));
 
   const [isLoading, setIsLoading] = useState(true)
   const [reto, setReto] = useState<any>(null)

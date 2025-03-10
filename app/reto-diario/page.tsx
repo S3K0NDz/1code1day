@@ -63,7 +63,7 @@ export default function RetoDiarioPage() {
   const editorRef = useRef<any>(null)
   const { user } = useAuth()
   const router = useRouter()
-  const isMobile = false;
+  const isMobile = typeof window !== "undefined" && (window.innerWidth <= 768 || (window.innerWidth >= 768 && window.innerWidth <= 1024));
   const [fileName, setFileName] = useState("reto-diario.js")
 
   useEffect(() => {
