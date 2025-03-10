@@ -35,7 +35,7 @@ import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/utils/supabaseClient"
 import { saveCompletedChallenge } from "@/lib/db-functions"
-import useMobile from "@/hooks/use-mobile"
+import { useMobile } from "@/hooks/use-mobile";
 
 // Eliminar la declaración global de invertirPalabras
 declare global {

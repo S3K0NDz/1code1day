@@ -1,38 +1,34 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 
-// Named export
+// Exportación nombrada
 export function useMobile(query: string): boolean {
-  const [matches, setMatches] = useState(false)
+  const [matches, setMatches] = useState(false);
 
   useEffect(() => {
     // Check if window is defined (client-side)
     if (typeof window === "undefined") {
-      return
+      return;
     }
 
-    const mediaQuery = window.matchMedia(query)
+    const mediaQuery = window.matchMedia(query);
 
     const handleChange = (event: MediaQueryListEvent) => {
-      setMatches(event.matches)
-    }
+      setMatches(event.matches);
+    };
 
     // Set initial value
-    setMatches(mediaQuery.matches)
+    setMatches(mediaQuery.matches);
 
     // Add event listener
-    mediaQuery.addEventListener("change", handleChange)
+    mediaQuery.addEventListener("change", handleChange);
 
     // Clean up
     return () => {
-      mediaQuery.removeEventListener("change", handleChange)
-    }
-  }, [query])
+      mediaQuery.removeEventListener("change", handleChange);
+    };
+  }, [query]);
 
-  return matches
+  return matches;
 }
-
-// Default export (same function)
-export default useMobile
-
