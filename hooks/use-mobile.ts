@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 
 // Named export
-export function useMediaQuery(query: string): boolean {
+export function useMobile(query: string): boolean {
   const [matches, setMatches] = useState(false)
 
   useEffect(() => {
@@ -34,5 +34,5 @@ export function useMediaQuery(query: string): boolean {
 }
 
 // Default export (same function)
-export default useMediaQuery
+export default useMobile
 

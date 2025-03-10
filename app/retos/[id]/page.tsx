@@ -36,13 +36,13 @@ import { useAuth } from "@/components/auth-provider"
 import { saveCompletedChallenge, toggleSavedChallenge } from "@/lib/db-functions"
 import PremiumContentLock from "@/components/premium-content-lock"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import useMediaQuery from "@/hooks/use-mobile"
+import useMobile from "@/hooks/use-mobile"
 
 export default function RetoPage() {
   // State and hooks remain the same
   const params = useParams()
   const id = params?.id as string
-  const isMobile = useMediaQuery("(max-width: 768px)")
+  const isMobile = useMobile("(max-width: 768px)")
 
   const [isLoading, setIsLoading] = useState(true)
   const [reto, setReto] = useState<any>(null)
