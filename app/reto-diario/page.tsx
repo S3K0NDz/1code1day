@@ -35,7 +35,7 @@ import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/utils/supabaseClient"
 import { saveCompletedChallenge } from "@/lib/db-functions"
-import { useMediaQuery } from "@/hooks/use-mobile"
+import useMediaQuery from "@/hooks/use-mobile"
 
 // Eliminar la declaración global de invertirPalabras
 declare global {
@@ -54,7 +54,7 @@ export default function RetoDiarioPage() {
   const [success, setSuccess] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [timeUntilNextChallenge, setTimeUntilNextChallenge] = useState({ hours: 0, minutes: 0, seconds: 0 })
+  const [timeUntilNextChallenge, setTimeUntilNextChallenge] = { hours: 0, minutes: 0, seconds: 0 }
   const editorRef = useRef<any>(null)
   const { user } = useAuth()
   const router = useRouter()

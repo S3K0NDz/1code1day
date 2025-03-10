@@ -24,3 +24,6 @@ export const useMediaQuery = (query: string): boolean => {
   return matches
 }
 
+// Also export as default for backward compatibility
+export default useMediaQuery
+
