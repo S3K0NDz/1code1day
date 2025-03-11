@@ -37,12 +37,13 @@ import { saveCompletedChallenge, toggleSavedChallenge } from "@/lib/db-functions
 import PremiumContentLock from "@/components/premium-content-lock"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-
 export default function RetoPage() {
   // State and hooks remain the same
   const params = useParams()
   const id = params?.id as string
-  const isMobile = typeof window !== "undefined" && (window.innerWidth <= 768 || (window.innerWidth >= 768 && window.innerWidth <= 1024));
+  const isMobile =
+    typeof window !== "undefined" &&
+    (window.innerWidth <= 768 || (window.innerWidth >= 768 && window.innerWidth <= 1024))
 
   const [isLoading, setIsLoading] = useState(true)
   const [reto, setReto] = useState<any>(null)

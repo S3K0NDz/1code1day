@@ -35,7 +35,6 @@ import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/utils/supabaseClient"
 import { saveCompletedChallenge } from "@/lib/db-functions"
-import { useIsMobile } from "@/hooks/use-mobile"
 
 // Eliminar la declaración global de invertirPalabras
 declare global {
@@ -63,7 +62,9 @@ export default function RetoDiarioPage() {
   const editorRef = useRef<any>(null)
   const { user } = useAuth()
   const router = useRouter()
-  const isMobile = typeof window !== "undefined" && (window.innerWidth <= 768 || (window.innerWidth >= 768 && window.innerWidth <= 1024));
+  const isMobile =
+    typeof window !== "undefined" &&
+    (window.innerWidth <= 768 || (window.innerWidth >= 768 && window.innerWidth <= 1024))
   const [fileName, setFileName] = useState("reto-diario.js")
 
   useEffect(() => {
@@ -697,9 +698,17 @@ export default function RetoDiarioPage() {
             {/* Header con navegación */}
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-lg font-bold">Reto Diario</h1>
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 mr-1.5 text-yellow-500" />
-                <span className="font-medium text-sm">{formatTime(remainingTime)}</span>
+              <div className="flex items-center gap-2">
+                <Link href="/ranking">
+                  <Button variant="outline" size="sm" className="flex items-center gap-1.5">
+                    <Trophy className="h-3.5 w-3.5" />
+                    <span>Ranking</span>
+                  </Button>
+                </Link>
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 mr-1.5 text-yellow-500" />
+                  <span className="font-medium text-sm">{formatTime(remainingTime)}</span>
+                </div>
               </div>
             </div>
 
@@ -967,6 +976,12 @@ export default function RetoDiarioPage() {
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold">Reto Diario</h1>
             <div className="flex items-center gap-4">
+              <Link href="/ranking">
+                <Button variant="outline" size="sm" className="flex items-center gap-1.5">
+                  <Trophy className="h-3.5 w-3.5" />
+                  <span>Ver Ranking</span>
+                </Button>
+              </Link>
               <div className="flex items-center bg-black/30 px-3 py-1 rounded-md">
                 <Clock className="h-4 w-4 mr-1.5 text-yellow-500" />
                 <span className="font-medium">Tiempo: {formatTime(remainingTime)}</span>

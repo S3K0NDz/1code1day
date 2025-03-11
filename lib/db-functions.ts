@@ -275,3 +275,57 @@ export async function cancelUserSubscription(userId: string) {
   }
 }
 
+// Añadir esta función al final del archivo
+
+// Función para obtener el ranking de un reto específico
+export async function getChallengeRanking(
+  challengeId: string,
+  timeFrame: "daily" | "weekly" | "monthly" | "alltime" = "daily",
+) {
+  try {
+    console.log(`Obteniendo ranking para el reto ${challengeId} con timeFrame ${timeFrame}`)
+
+    // Construir la consulta base
+    let query = supabase
+      .from("user_challenges")
+      .select(`
+        id,
+        user_id,
+        completed_at,
+        execution_time,
+        users:user_id (
+          id, 
+          email
+        )
+      `)
+      .eq("challenge_id", challengeId)
+      .not("execution_time", "is", null)
+      .order("execution_time", { ascending: true })
+
+    // Aplicar filtro de tiempo si es necesario
+    if (timeFrame === "weekly") {
+      const lastWeek = new Date()
+      lastWeek.setDate(lastWeek.getDate() - 7)
+      query = query.gte("completed_at", lastWeek.toISOString())
+    } else if (timeFrame === "monthly") {
+      const lastMonth = new Date()
+      lastMonth.setMonth(lastMonth.getMonth() - 1)
+      query = query.gte("completed_at", lastMonth.toISOString())
+    }
+
+    // Ejecutar la consulta
+    const { data, error } = await query.limit(100)
+
+    if (error) {
+      console.error("Error al obtener el ranking:", error)
+      throw error
+    }
+
+    console.log(`Ranking obtenido: ${data?.length} resultados`)
+    return { success: true, data }
+  } catch (error) {
+    console.error("Error en getChallengeRanking:", error)
+    return { success: false, error }
+  }
+}
+

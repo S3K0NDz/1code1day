@@ -84,6 +84,11 @@ export default function NavbarWithUser() {
                     Reto Diario
                   </Button>
                 </Link>
+                <Link href="/ranking">
+                  <Button variant="ghost" className="w-full justify-start">
+                    Ranking
+                  </Button>
+                </Link>
                 <Link href="/retos">
                   <Button variant="ghost" className="w-full justify-start">
                     Retos Anteriores
@@ -118,6 +123,9 @@ export default function NavbarWithUser() {
         <nav className="hidden md:flex items-center gap-6 text-sm">
           <Link href="/reto-diario" className="font-medium transition-colors hover:text-primary">
             Reto Diario
+          </Link>
+          <Link href="/ranking" className="font-medium transition-colors hover:text-primary">
+            Ranking
           </Link>
           <Link href="/retos" className="font-medium transition-colors hover:text-primary">
             Retos Anteriores
