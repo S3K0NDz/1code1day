@@ -56,7 +56,9 @@ export async function POST(request: Request) {
 
     // Construir el prompt para OpenAI
     const systemPrompt = `Eres un experto en programación y creación de retos de código. 
-    Genera un reto de programación completo basado en la descripción proporcionada.
+    Genera un reto de programación completo basado en la descripción proporcionada. importante tiene
+    que ser un reto resoluble y que los test funcionen y se puedan comprobar siempre en el código inicial tienes que 
+    crear una función, el reto tiene que ser de calidad. el lenguaje de programación siempre tiene que ser javascript,
     El reto debe tener una dificultad: ${difficulty}.
     ${category ? `El reto debe estar relacionado con la categoría: ${category}.` : ""}
     
@@ -76,8 +78,8 @@ export async function POST(request: Request) {
         "Segunda pista para resolver el reto"
       ],
       "testCases": [
-        {"input": "test1", "expected": "resultado1"},
-        {"input": "test2", "expected": "resultado2"}
+        {"input": "test1", "expected": },
+        {"input": "test2", "expected": }
       ]
     }`
 
@@ -86,7 +88,7 @@ export async function POST(request: Request) {
 
       // Llamar a la API de OpenAI
       const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
