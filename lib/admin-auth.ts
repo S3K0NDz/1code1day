@@ -1,70 +1,49 @@
 import { createClient } from "@supabase/supabase-js"
 
-// Cliente de Supabase con la clave de servicio para operaciones administrativas
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+// Función para crear un cliente de Supabase con permisos de administrador
+export function createAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-// Función para verificar si un token de acceso es válido y pertenece a un administrador
-export async function verifyAdminToken(token: string): Promise<boolean> {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error("Faltan variables de entorno para Supabase")
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
+}
+
+// Función para verificar si un usuario es administrador
+export async function isUserAdmin(userId: string) {
   try {
-    // Verificar el token de acceso
-    const {
-      data: { user },
-      error,
-    } = await supabaseAdmin.auth.getUser(token)
+    const supabase = createAdminClient()
 
-    if (error || !user) {
-      console.error("Error verificando token:", error)
+    // Verificar si el usuario existe en la tabla profiles
+    const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+
+    if (error) {
+      console.error("Error al verificar si el usuario es administrador:", error)
       return false
     }
 
-    // Verificar si el usuario es administrador
-    return !!user.user_metadata?.is_admin
+    // Verificar si el usuario tiene el rol de administrador
+    // Esto depende de cómo estés almacenando los roles de usuario
+    // Aquí asumimos que hay un campo user_metadata.is_admin en la tabla auth.users
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId)
+
+    if (userError || !userData) {
+      console.error("Error al obtener datos del usuario:", userError)
+      return false
+    }
+
+    return userData.user.user_metadata?.is_admin === true
   } catch (error) {
-    console.error("Error en verificación de admin:", error)
+    console.error("Error al verificar si el usuario es administrador:", error)
     return false
-  }
-}
-
-// Función para obtener todos los usuarios
-export async function getAllUsers() {
-  try {
-    // Obtener todos los usuarios
-    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers()
-
-    if (authError) {
-      console.error("Error al obtener usuarios:", authError)
-      return { error: "Error al obtener la lista de usuarios" }
-    }
-
-    // Obtener información adicional de los perfiles
-    // Solo seleccionamos columnas que sabemos que existen
-    const { data: profiles, error: profilesError } = await supabaseAdmin
-      .from("profiles")
-      .select("id, username, email_notifications")
-
-    if (profilesError) {
-      console.error("Error al obtener perfiles:", profilesError)
-      return { error: "Error al obtener la información de perfiles" }
-    }
-
-    // Combinar la información de usuarios y perfiles
-    const users = authUsers.users.map((user) => {
-      const profile = profiles.find((p) => p.id === user.id) || {}
-      return {
-        ...user,
-        user_metadata: {
-          ...user.user_metadata,
-          username: profile.username || user.user_metadata?.username || "",
-        },
-        // No incluimos is_subscribed ya que no existe en la tabla
-        email_notifications: profile.email_notifications || false,
-      }
-    })
-
-    return { users }
-  } catch (error) {
-    console.error("Error al listar usuarios:", error)
-    return { error: "Error interno del servidor" }
   }
 }
 

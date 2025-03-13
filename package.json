@@ -70,7 +70,8 @@
     "@supabase/auth-helpers-nextjs": "latest",
     "@stripe/stripe-js": "latest",
     "@monaco-editor/react": "latest",
-    "framer-motion": "latest"
+    "framer-motion": "latest",
+    "https:": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
