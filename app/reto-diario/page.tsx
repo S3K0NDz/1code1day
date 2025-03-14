@@ -21,6 +21,7 @@ import {
   Terminal,
   Code,
   BookOpen,
+  Loader2,
 } from "lucide-react"
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
@@ -570,7 +571,34 @@ export default function RetoDiarioPage() {
     return (
       <InteractiveGridBackground>
         <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <motion.div
+            className="text-center bg-black/30 backdrop-blur-sm p-8 rounded-xl border border-gray-800/50 shadow-2xl"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.div
+              className="flex items-center justify-center mb-6"
+              initial={{ y: -20 }}
+              animate={{ y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="bg-white text-black px-4 py-2 text-3xl font-bold">1code</div>
+              <div className="text-white text-3xl font-bold px-2">1day</div>
+            </motion.div>
+            <motion.div
+              className="flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur opacity-75 animate-pulse"></div>
+                <Loader2 className="h-10 w-10 animate-spin mr-2 relative" />
+              </div>
+              <span className="text-lg ml-3">Cargando el reto diario...</span>
+            </motion.div>
+          </motion.div>
         </div>
       </InteractiveGridBackground>
     )
@@ -586,10 +614,11 @@ export default function RetoDiarioPage() {
             <motion.div
               key="description"
               className="flex-1 flex flex-col"
-              initial={{ opacity: 1 }}
-              exit={{ opacity: 0, y: -50, transition: { duration: 0.5, ease: "easeInOut" } }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
             >
-              <div className="bg-[#121212] rounded-lg overflow-hidden border border-gray-800 flex flex-col">
+              <div className="bg-gradient-to-br from-[#121212] to-[#1a1a1a] rounded-lg overflow-hidden border border-gray-800 shadow-xl flex flex-col">
                 {/* Header con nombre de archivo */}
                 <div className="bg-[#1e1e1e] px-4 py-2 flex items-center justify-between border-b border-gray-800">
                   <div className="flex items-center">
@@ -604,27 +633,52 @@ export default function RetoDiarioPage() {
                 </div>
 
                 {/* Cabecera del reto */}
-                <div className="p-6 border-b border-gray-800">
+                <div className="p-6 border-b border-gray-800 bg-black/20">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                     <div className="flex items-center mb-4 md:mb-0">
-                      <h1 className="text-2xl sm:text-3xl font-bold mr-3 text-white">Reto Diario</h1>
+                      <motion.h1
+                        className="text-2xl sm:text-3xl font-bold mr-3 text-white"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2, duration: 0.5 }}
+                      >
+                        Reto Diario
+                      </motion.h1>
                       {dailyChallenge && (
-                        <Badge className={`${getDifficultyColor(dailyChallenge.difficulty)}`}>
-                          {dailyChallenge.difficulty}
-                        </Badge>
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.4, duration: 0.3 }}
+                        >
+                          <Badge className={`${getDifficultyColor(dailyChallenge.difficulty)}`}>
+                            {dailyChallenge.difficulty}
+                          </Badge>
+                        </motion.div>
                       )}
                     </div>
-                    <div className="flex items-center bg-black/30 px-4 py-2 rounded-md text-sm sm:text-base">
-                      <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-500" />
+                    <motion.div
+                      className="flex items-center bg-black/40 backdrop-blur-sm px-4 py-2 rounded-md text-sm sm:text-base shadow-lg"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5, duration: 0.5 }}
+                    >
+                      <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-400" />
                       <span className="font-medium">
                         Próximo reto: {nextHours.toString().padStart(2, "0")}:{nextMinutes.toString().padStart(2, "0")}:
                         {nextSeconds.toString().padStart(2, "0")}
                       </span>
-                    </div>
+                    </motion.div>
                   </div>
                   {dailyChallenge ? (
                     <>
-                      <h2 className="text-4xl font-bold mb-4 text-white">{dailyChallenge.title}</h2>
+                      <motion.h2
+                        className="text-4xl font-bold mb-4 text-white bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3, duration: 0.5 }}
+                      >
+                        {dailyChallenge.title}
+                      </motion.h2>
                       <div className="flex flex-wrap items-center text-gray-400 mb-6 text-xs sm:text-sm gap-y-1">
                         <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
                         <span>{dailyChallenge.date}</span>
@@ -635,12 +689,28 @@ export default function RetoDiarioPage() {
                         <span className="mx-2">•</span>
                         <span>Éxito: {dailyChallenge.successRate}%</span>
                       </div>
-                      <div className="bg-[#1e1e1e] p-6 rounded-lg">
+                      <motion.div
+                        className="bg-[#1e1e1e]/80 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-gray-800/50"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4, duration: 0.5 }}
+                      >
                         <p className="text-xl leading-relaxed text-gray-300">{dailyChallenge.description}</p>
-                      </div>
-                      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      </motion.div>
+                      <motion.div
+                        className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5, duration: 0.5 }}
+                      >
                         {dailyChallenge.examples.map((example, index) => (
-                          <div key={index} className="bg-[#1e1e1e] p-4 rounded-md">
+                          <motion.div
+                            key={index}
+                            className="bg-[#1e1e1e]/80 backdrop-blur-sm p-4 rounded-md border border-gray-800/50 shadow-md"
+                            initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.6 + index * 0.1, duration: 0.5 }}
+                          >
                             <p className="text-sm font-mono mb-2 text-gray-400">Ejemplo {index + 1}:</p>
                             <p className="text-sm font-mono mb-1">
                               Entrada: <span className="text-green-400">{example.input}</span>
@@ -648,28 +718,40 @@ export default function RetoDiarioPage() {
                             <p className="text-sm font-mono">
                               Salida: <span className="text-blue-400">{example.output}</span>
                             </p>
-                          </div>
+                          </motion.div>
                         ))}
-                      </div>
-                      <div className="mt-8 flex flex-col items-center">
-                        <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className="w-full sm:w-auto"
-                        >
-                          <Button size="lg" className="px-8 py-6 text-lg group w-full sm:w-auto" onClick={handleStart}>
-                            <motion.span
-                              initial={{ y: 0 }}
-                              animate={{ y: [0, -5, 0] }}
-                              transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.5, ease: "easeInOut" }}
-                              className="flex items-center"
+                      </motion.div>
+                      <motion.div
+                        className="mt-8 flex flex-col items-center"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.7, duration: 0.5 }}
+                      >
+                        <div className="relative">
+                          <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
+                          <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="relative w-full sm:w-auto"
+                          >
+                            <Button
+                              size="lg"
+                              className="px-8 py-6 text-lg group w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-0"
+                              onClick={handleStart}
                             >
-                              Comenzar
-                              <ArrowDown className="ml-2 h-5 w-5 transition" />
-                            </motion.span>
-                          </Button>
-                        </motion.div>
-                      </div>
+                              <motion.span
+                                initial={{ y: 0 }}
+                                animate={{ y: [0, -5, 0] }}
+                                transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.5, ease: "easeInOut" }}
+                                className="flex items-center"
+                              >
+                                Comenzar el Desafío
+                                <ArrowDown className="ml-2 h-5 w-5 transition" />
+                              </motion.span>
+                            </Button>
+                          </motion.div>
+                        </div>
+                      </motion.div>
                     </>
                   ) : (
                     <div className="text-center py-8">
@@ -876,86 +958,156 @@ export default function RetoDiarioPage() {
           </div>
 
           {showSuccessModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-              <div className="bg-black border border-border rounded-lg max-w-lg w-full overflow-hidden">
-                <div className="p-4 border-b border-border flex justify-between items-center">
-                  <h3 className="text-lg font-bold flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-yellow-400" />
-                    ¡Reto completado!
-                  </h3>
-                  <button onClick={() => setShowSuccessModal(false)} className="text-muted-foreground hover:text-white">
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="p-4 space-y-4">
-                  <div className="text-center">
-                    <div className="mb-4 text-base">
-                      ¡Felicidades, <span className="font-bold">{user?.email?.split("@")[0] || "usuario"}</span>!
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Has completado exitosamente el reto <span className="font-bold">{dailyChallenge?.title}</span>.
-                    </p>
+            <InteractiveGridBackground>
+              <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <motion.div
+                  className="bg-card border border-border rounded-lg max-w-lg w-full overflow-hidden shadow-2xl"
+                  initial={{ scale: 0.9, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1 }}
+                >
+                  <div className="p-4 border-b border-border flex justify-between items-center bg-secondary">
+                    <h3 className="text-lg sm:text-xl font-bold flex items-center gap-2 text-foreground">
+                      <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
+                      ¡Reto completado!
+                    </h3>
+                    <button
+                      onClick={() => setShowSuccessModal(false)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </button>
                   </div>
-                  <div className="relative border border-border rounded-lg overflow-hidden" id="share-card">
-                    <div className="p-4 flex flex-col items-center justify-center min-h-[180px]">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Trophy className="h-6 w-6 text-yellow-400" />
-                        <span className="text-base font-semibold flex items-center gap-1">
-                          <span className="bg-white text-black px-2">1code</span>
-                          <span className="text-white">1day</span>
-                        </span>
+                  <div className="p-6 space-y-6">
+                    <motion.div
+                      className="text-center"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.2 }}
+                    >
+                      <div className="mb-4 text-base">
+                        ¡Felicidades,{" "}
+                        <span className="font-bold text-blue-400">{user?.email?.split("@")[0] || "usuario"}</span>!
                       </div>
-                      <div className="text-center mb-4">
-                        <div className="text-lg font-bold mb-1">{user?.email?.split("@")[0] || "usuario"}</div>
-                        <div className="text-xs text-muted-foreground">ha completado el reto</div>
-                        <div className="text-lg font-bold mt-1">{dailyChallenge?.title}</div>
-                      </div>
-                      {dailyChallenge && (
-                        <div
-                          className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(dailyChallenge.difficulty)}`}
+                      <p className="text-sm text-muted-foreground">
+                        Has completado exitosamente el reto{" "}
+                        <span className="font-bold text-purple-400">{dailyChallenge?.title}</span>.
+                      </p>
+                    </motion.div>
+                    <motion.div
+                      className="relative border border-border rounded-lg overflow-hidden bg-muted"
+                      id="share-card"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.3 }}
+                    >
+                      <div className="p-6 flex flex-col items-center justify-center min-h-[200px] relative">
+                        <motion.div
+                          className="flex items-center gap-2 mb-4"
+                          initial={{ scale: 0.8 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 0.3, delay: 0.4 }}
                         >
-                          {dailyChallenge.difficulty}
+                          <Trophy className="h-8 w-8 text-yellow-400" />
+                          <span className="text-lg font-semibold flex items-center gap-1">
+                            <span className="bg-white text-black px-2 py-1 rounded-sm">1code</span>
+                            <span className="text-foreground">1day</span>
+                          </span>
+                        </motion.div>
+                        <div className="text-center mb-4">
+                          <div className="text-xl font-bold mb-1 text-foreground">
+                            {user?.email?.split("@")[0] || "usuario"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">ha completado el reto</div>
+                          <div className="text-xl font-bold mt-1">{dailyChallenge?.title}</div>
                         </div>
-                      )}
-                    </div>
+                        {dailyChallenge && (
+                          <motion.div
+                            initial={{ scale: 0.8 }}
+                            animate={{ scale: 1 }}
+                            transition={{ duration: 0.3, delay: 0.5 }}
+                            className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(dailyChallenge.difficulty)}`}
+                          >
+                            {dailyChallenge.difficulty}
+                          </motion.div>
+                        )}
+                      </div>
+                    </motion.div>
+                    <motion.div
+                      className="text-center"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.4 }}
+                    >
+                      <p className="text-xs text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
+                      <div className="flex justify-center gap-3">
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleShare("twitter")}
+                            title="Compartir en Twitter"
+                            className="bg-secondary hover:bg-secondary-foreground transition-colors"
+                            className="bg-black/30 border-gray-700 hover:bg-blue-900/20 transition-colors"
+                          >
+                            <Twitter className="h-4 w-4 text-blue-400" />
+                          </Button>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleShare("facebook")}
+                            title="Compartir en Facebook"
+                            className="bg-secondary hover:bg-secondary-foreground transition-colors"
+                          >
+                            <Facebook className="h-4 w-4 text-blue-500" />
+                          </Button>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleShare("linkedin")}
+                            title="Compartir en LinkedIn"
+                            className="bg-secondary hover:bg-secondary-foreground transition-colors"
+                          >
+                            <Linkedin className="h-4 w-4 text-blue-600" />
+                          </Button>
+                        </motion.div>
+                      </div>
+                    </motion.div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
-                    <div className="flex justify-center gap-3">
+                  <div className="p-4 border-t border-border flex flex-col sm:flex-row gap-2 sm:gap-3 sm:justify-end bg-secondary">
+                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                       <Button
                         variant="outline"
-                        size="icon"
-                        onClick={() => handleShare("twitter")}
-                        title="Compartir en Twitter"
+                        onClick={() => setShowSuccessModal(false)}
+                        className="w-full sm:w-auto bg-secondary hover:bg-secondary-foreground transition-colors"
                       >
-                        <Twitter className="h-4 w-4" />
+                        Cerrar
                       </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                       <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleShare("facebook")}
-                        title="Compartir en Facebook"
+                        onClick={() => {
+                          setShowSuccessModal(false)
+                          router.push("/retos")
+                        }}
+                        className="w-full sm:w-auto"
                       >
-                        <Facebook className="h-4 w-4" />
+                        Explorar más retos
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleShare("linkedin")}
-                        title="Compartir en LinkedIn"
-                      >
-                        <Linkedin className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    </motion.div>
                   </div>
-                </div>
-                <div className="p-4 border-t border-border flex flex-col gap-2">
-                  <Button variant="outline" onClick={() => setShowSuccessModal(false)}>
-                    Cerrar
-                  </Button>
-                </div>
-              </div>
-            </div>
+                </motion.div>
+              </motion.div>
+            </InteractiveGridBackground>
           )}
 
           <KeyboardHandler editorRef={editorRef} />
@@ -974,25 +1126,54 @@ export default function RetoDiarioPage() {
         <div className="container mx-auto px-4 py-4 flex-1 flex flex-col">
           {/* Header con navegación */}
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold">Reto Diario</h1>
+            <motion.h1
+              className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              Reto Diario
+            </motion.h1>
             <div className="flex items-center gap-4">
-              <Link href="/ranking">
-                <Button variant="outline" size="sm" className="flex items-center gap-1.5">
-                  <Trophy className="h-3.5 w-3.5" />
-                  <span>Ver Ranking</span>
-                </Button>
-              </Link>
-              <div className="flex items-center bg-black/30 px-3 py-1 rounded-md">
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Link href="/ranking">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1.5 bg-black/30 border-gray-700 hover:bg-gray-800/50"
+                  >
+                    <Trophy className="h-3.5 w-3.5 text-yellow-400" />
+                    <span>Ver Ranking</span>
+                  </Button>
+                </Link>
+              </motion.div>
+              <motion.div
+                className="flex items-center bg-black/40 backdrop-blur-sm px-3 py-1 rounded-md shadow-md"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
                 <Clock className="h-4 w-4 mr-1.5 text-yellow-500" />
                 <span className="font-medium">Tiempo: {formatTime(remainingTime)}</span>
-              </div>
-              <div className="flex items-center bg-black/30 px-3 py-1 rounded-md">
+              </motion.div>
+              <motion.div
+                className="flex items-center bg-black/40 backdrop-blur-sm px-3 py-1 rounded-md shadow-md"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+              >
                 <Clock className="h-4 w-4 mr-1.5 text-blue-500" />
                 <span className="font-medium text-xs sm:text-sm">
                   Próximo: {nextHours.toString().padStart(2, "0")}:{nextMinutes.toString().padStart(2, "0")}:
                   {nextSeconds.toString().padStart(2, "0")}
                 </span>
-              </div>
+              </motion.div>
             </div>
           </div>
 
@@ -1103,9 +1284,9 @@ export default function RetoDiarioPage() {
             <div className="lg:col-span-3 flex flex-col">
               <div className="flex flex-col h-full gap-4">
                 {/* Editor de código */}
-                <div className="flex-1 border border-gray-800 rounded-md overflow-hidden bg-[#1e1e1e] min-h-[500px]">
-                  <div className="bg-[#1e1e1e] px-4 py-2 text-sm font-medium border-b border-gray-800 flex items-center">
-                    <BookOpen className="h-4 w-4 mr-2 text-gray-400" />
+                <div className="flex-1 border border-gray-800 rounded-md overflow-hidden bg-[#1e1e1e] min-h-[500px] shadow-lg">
+                  <div className="bg-gradient-to-r from-[#1e1e1e] to-[#252525] px-4 py-2 text-sm font-medium border-b border-gray-800 flex items-center">
+                    <BookOpen className="h-4 w-4 mr-2 text-blue-400" />
                     <span className="text-gray-300">Editor</span>
                   </div>
                   <div className="h-[calc(100%-40px)]">
@@ -1136,15 +1317,18 @@ export default function RetoDiarioPage() {
                 </div>
 
                 {/* Consola de salida */}
-                <div className="h-64 border border-gray-800 rounded-md overflow-hidden bg-[#121212]">
-                  <div className="bg-[#1e1e1e] px-4 py-2 text-sm font-medium border-b border-gray-800 flex items-center">
-                    <Terminal className="h-4 w-4 mr-2 text-gray-400" />
+                <div className="h-64 border border-gray-800 rounded-md overflow-hidden bg-[#121212] shadow-lg">
+                  <div className="bg-gradient-to-r from-[#1e1e1e] to-[#252525] px-4 py-2 text-sm font-medium border-b border-gray-800 flex items-center">
+                    <Terminal className="h-4 w-4 mr-2 text-purple-400" />
                     <span className="text-gray-300">Consola</span>
                   </div>
                   <div className="h-[calc(100%-40px)]">
                     {isRunning ? (
                       <div className="flex items-center justify-center h-full">
-                        <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent"></div>
+                        <div className="relative">
+                          <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur opacity-75 animate-pulse"></div>
+                          <div className="animate-spin h-6 w-6 border-2 border-primary rounded-full border-t-transparent relative"></div>
+                        </div>
                       </div>
                     ) : (
                       <CodeOutput value={output || "Ejecuta tu código para ver los resultados"} height="100%" />
@@ -1154,136 +1338,210 @@ export default function RetoDiarioPage() {
 
                 {/* Barra de acciones */}
                 <div className="flex flex-wrap gap-2 justify-end">
-                  <Button variant="outline" size="sm" onClick={resetCode} className="flex-1 sm:flex-none">
-                    <RefreshCw className="h-4 w-4 mr-1.5" />
-                    Reiniciar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={runCode}
-                    disabled={isRunning}
-                    className="flex-1 sm:flex-none"
-                  >
-                    <Play className="h-4 w-4 mr-1.5" />
-                    Ejecutar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCheckCode}
-                    disabled={isRunning}
-                    className="flex-1 sm:flex-none"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1.5" />
-                    Comprobar
-                  </Button>
-                  <Button size="sm" onClick={handleSubmit} disabled={isRunning} className="flex-1 sm:flex-none">
-                    <Save className="h-4 w-4 mr-1.5" />
-                    Enviar
-                  </Button>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={resetCode}
+                      className="flex-1 sm:flex-none bg-black/30 border-gray-700 hover:bg-gray-800/50"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-1.5 text-yellow-400" />
+                      Reiniciar
+                    </Button>
+                  </motion.div>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={runCode}
+                      disabled={isRunning}
+                      className="flex-1 sm:flex-none bg-black/30 border-gray-700 hover:bg-gray-800/50"
+                    >
+                      <Play className="h-4 w-4 mr-1.5 text-green-400" />
+                      Ejecutar
+                    </Button>
+                  </motion.div>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCheckCode}
+                      disabled={isRunning}
+                      className="flex-1 sm:flex-none bg-black/30 border-gray-700 hover:bg-gray-800/50"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1.5 text-blue-400" />
+                      Comprobar
+                    </Button>
+                  </motion.div>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSubmit}
+                      disabled={isRunning}
+                      className="flex-1 sm:flex-none bg-black/30 border-gray-700 hover:bg-gray-800/50"
+                    >
+                      <Save className="h-4 w-4 mr-1.5" />
+                      Enviar
+                    </Button>
+                  </motion.div>
                 </div>
               </div>
             </div>
           </div>
 
           {showSuccessModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-              <div className="bg-black border border-border rounded-lg max-w-lg w-full overflow-hidden">
-                <div className="p-4 border-b border-border flex justify-between items-center">
-                  <h3 className="text-lg sm:text-xl font-bold flex items-center gap-2">
-                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
-                    ¡Reto completado!
-                  </h3>
-                  <button onClick={() => setShowSuccessModal(false)} className="text-muted-foreground hover:text-white">
-                    <X className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </button>
-                </div>
-                <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-                  <div className="text-center">
-                    <div className="mb-4 text-base sm:text-lg">
-                      ¡Felicidades, <span className="font-bold">{user?.email?.split("@")[0] || "usuario"}</span>!
-                    </div>
-                    <p className="text-sm sm:text-base text-muted-foreground">
-                      Has completado exitosamente el reto <span className="font-bold">{dailyChallenge?.title}</span>.
-                    </p>
+            <InteractiveGridBackground>
+              <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <motion.div
+                  className="bg-card border border-border rounded-lg max-w-lg w-full overflow-hidden shadow-2xl"
+                  initial={{ scale: 0.9, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1 }}
+                >
+                  <div className="p-4 border-b border-border flex justify-between items-center bg-secondary">
+                    <h3 className="text-lg sm:text-xl font-bold flex items-center gap-2 text-foreground">
+                      <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
+                      ¡Reto completado!
+                    </h3>
+                    <button
+                      onClick={() => setShowSuccessModal(false)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </button>
                   </div>
-                  <div className="relative border border-border rounded-lg overflow-hidden" id="share-card">
-                    <div className="p-4 sm:p-6 flex flex-col items-center justify-center min-h-[180px] sm:min-h-[200px]">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-400" />
-                        <span className="text-base sm:text-lg font-semibold flex items-center gap-1">
-                          <span className="bg-white text-black px-2">1code</span>
-                          <span className="text-white">1day</span>
-                        </span>
+                  <div className="p-6 space-y-6">
+                    <motion.div
+                      className="text-center"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.2 }}
+                    >
+                      <div className="mb-4 text-base">
+                        ¡Felicidades,{" "}
+                        <span className="font-bold text-blue-400">{user?.email?.split("@")[0] || "usuario"}</span>!
                       </div>
-                      <div className="text-center mb-4">
-                        <div className="text-lg sm:text-xl font-bold mb-1">
-                          {user?.email?.split("@")[0] || "usuario"}
-                        </div>
-                        <div className="text-xs sm:text-sm text-muted-foreground">ha completado el reto</div>
-                        <div className="text-lg sm:text-xl font-bold mt-1">{dailyChallenge?.title}</div>
-                      </div>
-                      {dailyChallenge && (
-                        <div
-                          className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(dailyChallenge.difficulty)}`}
+                      <p className="text-sm text-muted-foreground">
+                        Has completado exitosamente el reto{" "}
+                        <span className="font-bold text-purple-400">{dailyChallenge?.title}</span>.
+                      </p>
+                    </motion.div>
+                    <motion.div
+                      className="relative border border-border rounded-lg overflow-hidden bg-muted"
+                      id="share-card"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.3 }}
+                    >
+                      <div className="p-6 flex flex-col items-center justify-center min-h-[200px] relative">
+                        <motion.div
+                          className="flex items-center gap-2 mb-4"
+                          initial={{ scale: 0.8 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 0.3, delay: 0.4 }}
                         >
-                          {dailyChallenge.difficulty}
+                          <Trophy className="h-8 w-8 text-yellow-400" />
+                          <span className="text-lg font-semibold flex items-center gap-1">
+                            <span className="bg-white text-black px-2 py-1 rounded-sm">1code</span>
+                            <span className="text-foreground">1day</span>
+                          </span>
+                        </motion.div>
+                        <div className="text-center mb-4">
+                          <div className="text-xl font-bold mb-1 text-foreground">
+                            {user?.email?.split("@")[0] || "usuario"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">ha completado el reto</div>
+                          <div className="text-xl font-bold mt-1">{dailyChallenge?.title}</div>
                         </div>
-                      )}
-                    </div>
+                        {dailyChallenge && (
+                          <motion.div
+                            initial={{ scale: 0.8 }}
+                            animate={{ scale: 1 }}
+                            transition={{ duration: 0.3, delay: 0.5 }}
+                            className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(dailyChallenge.difficulty)}`}
+                          >
+                            {dailyChallenge.difficulty}
+                          </motion.div>
+                        )}
+                      </div>
+                    </motion.div>
+                    <motion.div
+                      className="text-center"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.4 }}
+                    >
+                      <p className="text-xs text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
+                      <div className="flex justify-center gap-3">
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleShare("twitter")}
+                            title="Compartir en Twitter"
+                            className="bg-secondary hover:bg-secondary-foreground transition-colors"
+                            className="bg-black/30 border-gray-700 hover:bg-blue-900/20 transition-colors"
+                          >
+                            <Twitter className="h-4 w-4 text-blue-400" />
+                          </Button>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleShare("facebook")}
+                            title="Compartir en Facebook"
+                            className="bg-secondary hover:bg-secondary-foreground transition-colors"
+                          >
+                            <Facebook className="h-4 w-4 text-blue-500" />
+                          </Button>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleShare("linkedin")}
+                            title="Compartir en LinkedIn"
+                            className="bg-secondary hover:bg-secondary-foreground transition-colors"
+                          >
+                            <Linkedin className="h-4 w-4 text-blue-600" />
+                          </Button>
+                        </motion.div>
+                      </div>
+                    </motion.div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
-                    <div className="flex justify-center gap-3">
+                  <div className="p-4 border-t border-border flex flex-col sm:flex-row gap-2 sm:gap-3 sm:justify-end bg-secondary">
+                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                       <Button
                         variant="outline"
-                        size="icon"
-                        onClick={() => handleShare("twitter")}
-                        title="Compartir en Twitter"
+                        onClick={() => setShowSuccessModal(false)}
+                        className="w-full sm:w-auto bg-secondary hover:bg-secondary-foreground transition-colors"
                       >
-                        <Twitter className="h-4 w-4 sm:h-5 sm:w-5" />
+                        Cerrar
                       </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                       <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleShare("facebook")}
-                        title="Compartir en Facebook"
+                        onClick={() => {
+                          setShowSuccessModal(false)
+                          router.push("/retos")
+                        }}
+                        className="w-full sm:w-auto"
                       >
-                        <Facebook className="h-4 w-4 sm:h-5 sm:w-5" />
+                        Explorar más retos
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleShare("linkedin")}
-                        title="Compartir en LinkedIn"
-                      >
-                        <Linkedin className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </Button>
-                    </div>
+                    </motion.div>
                   </div>
-                </div>
-                <div className="p-4 border-t border-border flex flex-col sm:flex-row gap-2 sm:gap-0 sm:justify-between">
-                  <Button variant="outline" onClick={() => setShowSuccessModal(false)} className="w-full sm:w-auto">
-                    Cerrar
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowSuccessModal(false)
-                      router.push("/retos")
-                    }}
-                    className="w-full sm:w-auto"
-                  >
-                    Explorar más retos
-                  </Button>
-                </div>
-              </div>
-            </div>
+                </motion.div>
+              </motion.div>
+            </InteractiveGridBackground>
           )}
-
-          <KeyboardHandler editorRef={editorRef} />
-          <ClipboardHelper editorRef={editorRef} />
-          <Toaster />
         </div>
       </div>
     </InteractiveGridBackground>
