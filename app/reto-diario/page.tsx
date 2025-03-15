@@ -62,6 +62,7 @@ export default function RetoDiarioPage() {
   const [hasStarted, setHasStarted] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [testResults, setTestResults] = useState<TestResult[]>([])
+  const [consoleView, setConsoleView] = useState<"tests" | "output">("output")
 
   // Use separate states for hours, minutes, and seconds instead of an object
   const [nextHours, setNextHours] = useState(0)
@@ -271,6 +272,7 @@ export default function RetoDiarioPage() {
 
     setIsRunning(true)
     setOutput("")
+    setConsoleView("output") // Cambiar a la vista de consola
 
     try {
       let consoleOutput = ""
@@ -440,6 +442,7 @@ export default function RetoDiarioPage() {
         }
 
         setTestResults(results)
+        setConsoleView("tests") // Cambiar a la vista de tests
         const passedCount = results.filter((r) => r.passed).length
         const totalTests = results.length
 
@@ -553,9 +556,7 @@ export default function RetoDiarioPage() {
       )
     } else if (platform === "facebook") {
       window.open(
-        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(
-          text,
-        )}`,
+        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`,
         "_blank",
       )
     } else if (platform === "linkedin") {
@@ -904,101 +905,128 @@ export default function RetoDiarioPage() {
                         <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent"></div>
                       </div>
                     ) : (
-                      <div className="h-full overflow-auto">
-  {testResults.length > 0 ? (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-white">Resultados de Tests</h3>
-        <span className="text-sm text-muted-foreground">
-          {testResults.filter((r) => r.passed).length} de {testResults.length} tests pasando
-        </span>
-      </div>
-      <div className="space-y-3">
-        {testResults.map((result, index) => (
-          <motion.div
-            key={result.id}
-            className={`p-4 rounded-lg border ${
-              result.passed
-                ? "bg-green-500/10 border-green-500/30"
-                : "bg-red-500/10 border-red-500/30"
-            }`}
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.5, delay: index * 0.1, ease: "easeOut" }}
-            whileHover={{ scale: 1.02 }}
-          >
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <motion.p
-                  className="text-sm font-medium flex items-center gap-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3, delay: index * 0.2 + 0.1 }}
-                >
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{
-                      duration: 0.4,
-                      delay: index * 0.2 + 0.2,
-                      type: "spring",
-                      stiffness: 200,
-                    }}
-                  >
-                    {result.passed ? (
-                      <span className="text-green-500 text-lg">✓</span>
-                    ) : (
-                      <span className="text-red-500 text-lg">✕</span>
-                    )}
-                  </motion.span>
-                  Test {result.id}
-                </motion.p>
-                <div className="text-xs space-y-1 text-muted-foreground">
-                  <p>
-                    Input: <span className="text-foreground font-mono">{result.input}</span>
-                  </p>
-                  <p>
-                    Expected: <span className="text-foreground font-mono">{result.expected}</span>
-                  </p>
-                  <p>
-                    Result: <span className="text-foreground font-mono">{result.result}</span>
-                  </p>
-                  {result.error && (
-                    <motion.p
-                      className="text-red-400"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3, delay: index * 0.2 + 0.3 }}
-                    >
-                      Error: {result.error}
-                    </motion.p>
-                  )}
-                </div>
-              </div>
-              {/* Indicador visual adicional */}
-              <motion.div
-                className={`w-2 h-2 rounded-full ${
-                  result.passed ? "bg-green-500" : "bg-red-500"
-                }`}
-                initial={{ scale: 0 }}
-                animate={{ scale: [0, 1.2, 1] }}
-                transition={{
-                  duration: 0.5,
-                  delay: index * 0.2 + 0.3,
-                  ease: "easeInOut",
-                }}
-              />
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  ) : (
-    <div className="h-full flex items-center justify-center text-muted-foreground">
-      {output || "Ejecuta tu código para ver los resultados"}
-    </div>
-  )}
-</div>
+                      <div className="h-full flex flex-col">
+                        {/* Botones para cambiar la vista */}
+                        <div className="flex border-b border-gray-800">
+                          <button
+                            onClick={() => setConsoleView("output")}
+                            className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                              consoleView === "output"
+                                ? "bg-gray-800/50 text-white border-b-2 border-blue-500"
+                                : "text-gray-400 hover:text-gray-300"
+                            }`}
+                          >
+                            Consola
+                          </button>
+                          <button
+                            onClick={() => setConsoleView("tests")}
+                            className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                              consoleView === "tests"
+                                ? "bg-gray-800/50 text-white border-b-2 border-blue-500"
+                                : "text-gray-400 hover:text-gray-300"
+                            }`}
+                          >
+                            Tests{" "}
+                            {testResults.length > 0 &&
+                              `(${testResults.filter((r) => r.passed).length}/${testResults.length})`}
+                          </button>
+                        </div>
+
+                        {/* Contenido de la consola */}
+                        <div className="flex-1 overflow-auto">
+                          {consoleView === "tests" && testResults.length > 0 ? (
+                            <div className="p-4 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-medium text-white">Resultados de Tests</h3>
+                                <span className="text-sm text-muted-foreground">
+                                  {testResults.filter((r) => r.passed).length} de {testResults.length} tests pasando
+                                </span>
+                              </div>
+                              <div className="space-y-3">
+                                {testResults.map((result, index) => (
+                                  <motion.div
+                                    key={result.id}
+                                    className={`p-4 rounded-lg border ${
+                                      result.passed
+                                        ? "bg-green-500/10 border-green-500/30"
+                                        : "bg-red-500/10 border-red-500/30"
+                                    }`}
+                                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    transition={{ duration: 0.5, delay: index * 0.1, ease: "easeOut" }}
+                                    whileHover={{ scale: 1.02 }}
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="space-y-1">
+                                        <motion.p
+                                          className="text-sm font-medium flex items-center gap-2"
+                                          initial={{ opacity: 0 }}
+                                          animate={{ opacity: 1 }}
+                                          transition={{ duration: 0.3, delay: index * 0.2 + 0.1 }}
+                                        >
+                                          <motion.span
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            transition={{
+                                              duration: 0.4,
+                                              delay: index * 0.2 + 0.2,
+                                              type: "spring",
+                                              stiffness: 200,
+                                            }}
+                                          >
+                                            {result.passed ? (
+                                              <span className="text-green-500 text-lg">✓</span>
+                                            ) : (
+                                              <span className="text-red-500 text-lg">✕</span>
+                                            )}
+                                          </motion.span>
+                                          Test {result.id}
+                                        </motion.p>
+                                        <div className="text-xs space-y-1 text-muted-foreground">
+                                          <p>
+                                            Input: <span className="text-foreground font-mono">{result.input}</span>
+                                          </p>
+                                          <p>
+                                            Expected:{" "}
+                                            <span className="text-foreground font-mono">{result.expected}</span>
+                                          </p>
+                                          {result.error && (
+                                            <motion.p
+                                              className="text-red-400"
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              transition={{ duration: 0.3, delay: index * 0.2 + 0.3 }}
+                                            >
+                                              Error: {result.error}
+                                            </motion.p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {/* Indicador visual adicional */}
+                                      <motion.div
+                                        className={`w-2 h-2 rounded-full ${
+                                          result.passed ? "bg-green-500" : "bg-red-500"
+                                        }`}
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: [0, 1.2, 1] }}
+                                        transition={{
+                                          duration: 0.5,
+                                          delay: index * 0.2 + 0.3,
+                                          ease: "easeInOut",
+                                        }}
+                                      />
+                                    </div>
+                                  </motion.div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="h-full p-4 font-mono text-sm text-gray-300 whitespace-pre-wrap">
+                              {output || "Ejecuta tu código para ver los resultados"}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1451,59 +1479,115 @@ export default function RetoDiarioPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="h-full overflow-auto">
-                        {testResults.length > 0 ? (
-                          <div className="p-4 space-y-4">
-                            <div className="flex items-center justify-between">
-                              <h3 className="text-sm font-medium">Tests</h3>
-                              <span className="text-sm text-muted-foreground">
-                                {testResults.filter((r) => r.passed).length} de {testResults.length} tests pasando
-                              </span>
-                            </div>
-                            <div className="space-y-2">
-                              {testResults.map((result) => (
-                                <div
-                                  key={result.id}
-                                  className={`p-4 rounded-lg border ${
-                                    result.passed
-                                      ? "bg-green-500/10 border-green-500/20"
-                                      : "bg-red-500/10 border-red-500/20"
-                                  }`}
-                                >
-                                  <div className="flex items-start justify-between">
-                                    <div className="space-y-1">
-                                      <p className="text-sm font-medium flex items-center gap-2">
-                                        {result.passed ? (
-                                          <span className="text-green-500">✓</span>
-                                        ) : (
-                                          <span className="text-red-500">✕</span>
-                                        )}
-                                        Test {result.id}
-                                      </p>
-                                      <div className="text-xs space-y-1 text-muted-foreground">
-                                        <p>
-                                          Input: <span className="text-foreground font-mono">{result.input}</span>
+                      <div className="h-full flex flex-col">
+                        {/* Botones para cambiar la vista */}
+                        <div className="flex border-b border-gray-800">
+                          <button
+                            onClick={() => setConsoleView("output")}
+                            className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                              consoleView === "output"
+                                ? "bg-gray-800/50 text-white border-b-2 border-blue-500"
+                                : "text-gray-400 hover:text-gray-300"
+                            }`}
+                          >
+                            Consola
+                          </button>
+                          <button
+                            onClick={() => setConsoleView("tests")}
+                            className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                              consoleView === "tests"
+                                ? "bg-gray-800/50 text-white border-b-2 border-blue-500"
+                                : "text-gray-400 hover:text-gray-300"
+                            }`}
+                          >
+                            Tests{" "}
+                            {testResults.length > 0 &&
+                              `(${testResults.filter((r) => r.passed).length}/${testResults.length})`}
+                          </button>
+                        </div>
+
+                        {/* Contenido de la consola */}
+                        <div className="flex-1 overflow-auto">
+                          {consoleView === "tests" && testResults.length > 0 ? (
+                            <div className="p-4 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-medium">Tests</h3>
+                                <span className="text-sm text-muted-foreground">
+                                  {testResults.filter((r) => r.passed).length} de {testResults.length} tests pasando
+                                </span>
+                              </div>
+                              <div className="space-y-2">
+                                {testResults.map((result, index) => (
+                                  <div
+                                    key={result.id}
+                                    className={`p-4 rounded-lg border ${
+                                      result.passed
+                                        ? "bg-green-500/10 border-green-500/20"
+                                        : "bg-red-500/10 border-red-500/20"
+                                    }`}
+                                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    transition={{ duration: 0.4, delay: index * 0.08 }}
+                                    whileHover={{ scale: 1.01 }}
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="space-y-1">
+                                        <p className="text-sm font-medium flex items-center gap-2">
+                                          <motion.span
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            transition={{
+                                              duration: 0.4,
+                                              delay: index * 0.1 + 0.2,
+                                              type: "spring",
+                                              stiffness: 200,
+                                            }}
+                                          >
+                                            {result.passed ? (
+                                              <span className="text-green-500 text-lg">✓</span>
+                                            ) : (
+                                              <span className="text-red-500 text-lg">✕</span>
+                                            )}
+                                          </motion.span>
+                                          Test {result.id}
                                         </p>
-                                        <p>
-                                          Expected:{" "}
-                                          <span className="text-foreground font-mono">{result.expected}</span>
-                                        </p>
-                                        <p>
-                                          Result: <span className="text-foreground font-mono">{result.result}</span>
-                                        </p>
-                                        {result.error && <p className="text-red-400">Error: {result.error}</p>}
+                                        <div className="text-xs space-y-1 text-muted-foreground">
+                                          <p>
+                                            Input: <span className="text-foreground font-mono">{result.input}</span>
+                                          </p>
+                                          <p>
+                                            Expected:{" "}
+                                            <span className="text-foreground font-mono">{result.expected}</span>
+                                          </p>
+                                          <p>
+                                            Result: <span className="text-foreground font-mono">{result.result}</span>
+                                          </p>
+                                          {result.error && <p className="text-red-400">Error: {result.error}</p>}
+                                        </div>
                                       </div>
+                                      <motion.div
+                                        className={`w-2 h-2 rounded-full ${
+                                          result.passed ? "bg-green-500" : "bg-red-500"
+                                        }`}
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: [0, 1.2, 1] }}
+                                        transition={{
+                                          duration: 0.5,
+                                          delay: index * 0.1 + 0.3,
+                                          ease: "easeInOut",
+                                        }}
+                                      />
                                     </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="h-full flex items-center justify-center text-muted-foreground">
-                            {output || "Ejecuta tu código para ver los resultados"}
-                          </div>
-                        )}
+                          ) : (
+                            <div className="h-full p-4 font-mono text-sm text-gray-300 whitespace-pre-wrap">
+                              {output || "Ejecuta tu código para ver los resultados"}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1720,3 +1804,4 @@ export default function RetoDiarioPage() {
     </InteractiveGridBackground>
   )
 }
+
