@@ -22,8 +22,9 @@ import {
   UserRound,
   LayoutGrid,
   List,
-  Terminal,
   Code,
+  CheckCircle2,
+  CircleSlash,
 } from "lucide-react"
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
@@ -31,6 +32,7 @@ import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "@/components/ui/use-toast"
 import { Toaster } from "@/components/ui/toaster"
+import { Progress } from "@/components/ui/progress"
 
 export default function RetosPage() {
   const [retos, setRetos] = useState([])
@@ -40,6 +42,7 @@ export default function RetosPage() {
   const [difficulty, setDifficulty] = useState("all")
   const [category, setCategory] = useState("all")
   const [retoType, setRetoType] = useState("all")
+  const [completionStatus, setCompletionStatus] = useState("all") // Nuevo estado para filtrar por completados
   const [showFilters, setShowFilters] = useState(false)
   const [categories, setCategories] = useState([])
   const [difficulties, setDifficulties] = useState([])
@@ -53,15 +56,26 @@ export default function RetosPage() {
   const { user, isPro, isLoading: authLoading } = useAuth()
   const router = useRouter()
 
+  // Estadísticas de progreso
+  const [stats, setStats] = useState({
+    total: { completed: 0, total: 0 },
+    free: { completed: 0, total: 0 },
+    premium: { completed: 0, total: 0 },
+  })
+
   useEffect(() => {
     const fetchRetos = async () => {
       setIsLoading(true)
       try {
-        // Obtener todos los retos desde Supabase, incluyendo los retos diarios pasados
+        // Obtener la fecha actual en formato ISO (YYYY-MM-DD)
+        const today = new Date().toISOString().split("T")[0]
+
+        // Obtener todos los retos desde Supabase, solo de hoy hacia atrás
         const { data: retosData, error: retosError } = await supabase
           .from("retos")
           .select("*")
           .eq("published", true)
+          .or(`daily_date.lte.${today},daily_date.is.null`)
           .order("createdat", { ascending: false })
 
         if (retosError) {
@@ -133,6 +147,24 @@ export default function RetosPage() {
             }
           })
 
+          // Calcular estadísticas
+          if (user) {
+            const totalRetos = processedRetos.length
+            const totalCompleted = processedRetos.filter((reto) => reto.completed).length
+
+            const freeRetos = processedRetos.filter((reto) => reto.isFreeAccess).length
+            const freeCompleted = processedRetos.filter((reto) => reto.isFreeAccess && reto.completed).length
+
+            const premiumRetos = processedRetos.filter((reto) => !reto.isFreeAccess).length
+            const premiumCompleted = processedRetos.filter((reto) => !reto.isFreeAccess && reto.completed).length
+
+            setStats({
+              total: { completed: totalCompleted, total: totalRetos },
+              free: { completed: freeCompleted, total: freeRetos },
+              premium: { completed: premiumCompleted, total: premiumRetos },
+            })
+          }
+
           setRetos(processedRetos)
           setFilteredRetos(processedRetos)
         }
@@ -155,7 +187,7 @@ export default function RetosPage() {
   }, [user])
 
   useEffect(() => {
-    // Filtrar retos basados en búsqueda, dificultad, categoría, tipo y pestaña
+    // Filtrar retos basados en búsqueda, dificultad, categoría, tipo, estado de completado y pestaña
     let filtered = [...retos]
 
     if (searchTerm) {
@@ -179,17 +211,23 @@ export default function RetosPage() {
       filtered = filtered.filter((reto) => (retoType === "daily" ? reto.isDailyChallenge : !reto.isDailyChallenge))
     }
 
+    // Filtrar por estado de completado
+    if (completionStatus !== "all" && user) {
+      filtered = filtered.filter((reto) => (completionStatus === "completed" ? reto.completed : !reto.completed))
+    }
+
     // Aplicar filtro según la pestaña activa
     filtered = filtered.filter((reto) => (activeTab === "free" ? reto.isFreeAccess : !reto.isFreeAccess))
 
     setFilteredRetos(filtered)
-  }, [searchTerm, difficulty, category, retoType, activeTab, retos])
+  }, [searchTerm, difficulty, category, retoType, completionStatus, activeTab, retos, user])
 
   const clearFilters = () => {
     setSearchTerm("")
     setDifficulty("all")
     setCategory("all")
     setRetoType("all")
+    setCompletionStatus("all")
   }
 
   const getDifficultyColor = (difficulty) => {
@@ -252,6 +290,26 @@ export default function RetosPage() {
     return text.length > maxLength ? text.substring(0, maxLength) + "..." : text
   }
 
+  // Componente para mostrar estadísticas de progreso
+  const ProgressStats = ({ stats, type }) => {
+    if (!user) return null
+
+    const { completed, total } = stats
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0
+
+    return (
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-1">
+          <div className="text-sm font-medium">
+            Progreso: {completed} de {total} retos completados
+          </div>
+          <div className="text-sm font-medium">{percentage}%</div>
+        </div>
+        <Progress value={percentage} className="h-2" />
+      </div>
+    )
+  }
+
   return (
     <InteractiveGridBackground>
       <div className="min-h-screen">
@@ -265,21 +323,30 @@ export default function RetosPage() {
                 Explora y practica con todos nuestros retos anteriores para mejorar tus habilidades
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="relative">
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="relative flex-1 md:flex-none"
+              >
                 <Filter className="h-4 w-4 mr-2" />
                 Filtros
-                {(searchTerm || difficulty !== "all" || category !== "all" || retoType !== "all") && (
+                {(searchTerm ||
+                  difficulty !== "all" ||
+                  category !== "all" ||
+                  retoType !== "all" ||
+                  completionStatus !== "all") && (
                   <Badge variant="secondary" className="ml-2">
                     {(searchTerm ? 1 : 0) +
                       (difficulty !== "all" ? 1 : 0) +
                       (category !== "all" ? 1 : 0) +
-                      (retoType !== "all" ? 1 : 0)}
+                      (retoType !== "all" ? 1 : 0) +
+                      (completionStatus !== "all" ? 1 : 0)}
                   </Badge>
                 )}
               </Button>
-              <Link href="/reto-diario">
-                <Button>
+              <Link href="/reto-diario" className="flex-1 md:flex-none">
+                <Button className="w-full">
                   <Calendar className="h-4 w-4 mr-2" />
                   Reto diario
                 </Button>
@@ -287,10 +354,43 @@ export default function RetosPage() {
             </div>
           </div>
 
+          {/* Estadísticas generales de progreso (solo para usuarios autenticados) */}
+          {user && !isLoading && (
+            <div className="mb-4 overflow-x-auto">
+              <div className="flex flex-wrap gap-2 min-w-max">
+                <Badge
+                  variant="outline"
+                  className="bg-primary/10 text-primary border-primary/20 flex items-center gap-1.5 py-1.5"
+                >
+                  <Trophy className="h-3.5 w-3.5" />
+                  {stats.total.completed}/{stats.total.total} retos completados
+                </Badge>
+
+                <Badge
+                  variant="outline"
+                  className="bg-green-500/10 text-green-500 border-green-500/20 flex items-center gap-1.5 py-1.5"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {stats.free.completed}/{stats.free.total} gratis
+                </Badge>
+
+                <Badge
+                  variant="outline"
+                  className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 flex items-center gap-1.5 py-1.5"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  {stats.premium.completed}/{stats.premium.total} premium
+                </Badge>
+
+                
+              </div>
+            </div>
+          )}
+
           {/* Mensaje para usuarios no autenticados */}
           {!authLoading && !user && (
             <div className="mb-6 p-4 border border-blue-500/30 bg-blue-500/5 rounded-lg">
-              <div className="flex items-start gap-3">
+              <div className="flex flex-col sm:flex-row items-start gap-3">
                 <div className="bg-blue-500/20 p-2 rounded-full">
                   <UserRound className="h-5 w-5 text-blue-500" />
                 </div>
@@ -318,7 +418,7 @@ export default function RetosPage() {
           {/* Filtros con explicaciones integradas */}
           {showFilters && (
             <div className="bg-card/50 border border-border rounded-lg p-4 mb-6 animate-in fade-in duration-300">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 {/* Filtro de búsqueda */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 mb-1">
@@ -395,7 +495,7 @@ export default function RetosPage() {
                   </Select>
                 </div>
 
-                {/* Filtro de tipo de reto (nuevo) */}
+                {/* Filtro de tipo de reto */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 mb-1">
                     <CalendarDays className="h-4 w-4 text-primary" />
@@ -417,6 +517,31 @@ export default function RetosPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Filtro de estado de completado (nuevo) */}
+                {user && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      <label htmlFor="completion-select" className="text-sm font-medium">
+                        Estado
+                      </label>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Filtra por retos completados o pendientes por resolver.
+                    </p>
+                    <Select id="completion-select" value={completionStatus} onValueChange={setCompletionStatus}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="completed">Completados</SelectItem>
+                        <SelectItem value="pending">Pendientes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end mt-4">
@@ -430,25 +555,34 @@ export default function RetosPage() {
 
           {/* Pestañas para separar retos gratuitos y premium */}
           <Tabs defaultValue="free" value={activeTab} onValueChange={setActiveTab} className="mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <TabsList className="grid w-full max-w-md grid-cols-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+              <TabsList className="grid w-full sm:w-auto sm:max-w-md grid-cols-2">
                 <TabsTrigger value="free" className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4" />
-                  Retos gratis
+                  <span className="whitespace-nowrap">Retos gratis</span>
+                  {user && (
+                    <Badge variant="outline" className="ml-2 bg-green-500/20 text-green-500 border-green-500/20">
+                      {stats.free.completed}/{stats.free.total}
+                    </Badge>
+                  )}
                 </TabsTrigger>
                 <TabsTrigger value="premium" className="flex items-center gap-2">
                   <Lock className="h-4 w-4" />
-                  Retos premium
-                  {!isPro && (
+                  <span className="whitespace-nowrap">Retos premium</span>
+                  {!isPro ? (
                     <Badge variant="outline" className="ml-2 bg-yellow-500/20 text-yellow-500 border-yellow-500/20">
                       Actualiza
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="ml-2 bg-yellow-500/20 text-yellow-500 border-yellow-500/20">
+                      {stats.premium.completed}/{stats.premium.total}
                     </Badge>
                   )}
                 </TabsTrigger>
               </TabsList>
 
               {/* Botones para cambiar entre vista de cuadrícula y lista */}
-              <div className="flex items-center gap-2 bg-secondary rounded-md p-1">
+              <div className="flex items-center gap-2 bg-secondary rounded-md p-1 self-end sm:self-auto">
                 <Button
                   variant={viewMode === "grid" ? "default" : "ghost"}
                   size="sm"
@@ -472,16 +606,21 @@ export default function RetosPage() {
             <TabsContent value="free" className="mt-0">
               {!isPro && (
                 <div className="mb-6 p-4 border border-green-500/30 bg-green-500/5 rounded-lg">
-                  <div className="flex items-start gap-3">
+                  <div className="flex flex-col sm:flex-row items-start gap-3">
                     <div className="bg-green-500/20 p-2 rounded-full">
                       <Sparkles className="h-5 w-5 text-green-500" />
                     </div>
-                    <div>
+                    <div className="w-full">
                       <h3 className="font-medium mb-1">Retos gratuitos disponibles</h3>
                       <p className="text-sm text-muted-foreground">
                         Estos retos están disponibles para todos los usuarios. Practica con ellos y mejora tus
                         habilidades.
                       </p>
+                      {user && (
+                        <div className="mt-3">
+                          <ProgressStats stats={stats.free} type="free" />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -491,7 +630,7 @@ export default function RetosPage() {
             <TabsContent value="premium" className="mt-0">
               {!isPro ? (
                 <div className="mb-6 p-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg">
-                  <div className="flex items-start gap-3">
+                  <div className="flex flex-col sm:flex-row items-start gap-3">
                     <div className="bg-yellow-500/20 p-2 rounded-full">
                       <Trophy className="h-5 w-5 text-yellow-500" />
                     </div>
@@ -510,21 +649,7 @@ export default function RetosPage() {
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="mb-6 p-4 border border-primary/30 bg-primary/5 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-primary/20 p-2 rounded-full">
-                      <Trophy className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium mb-1">Tu acceso Premium</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Disfruta de acceso completo a todos nuestros retos premium. ¡Gracias por tu apoyo!
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              ) : ("")}
             </TabsContent>
 
             {/* Lista de retos (común para ambas pestañas) */}
@@ -655,13 +780,13 @@ export default function RetosPage() {
                                   )}
                                   {user && reto.completed ? (
                                     <div className="bg-[#1e1e1e] text-xs text-green-400 px-2 py-1 rounded flex items-center">
-                                      <Terminal className="h-3 w-3 mr-1" />
-                                      <span className="font-mono">$ test: passed</span>
+                                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                                      <span className="font-mono">completado</span>
                                     </div>
                                   ) : (
                                     <div className="bg-[#1e1e1e] text-xs text-gray-300 px-2 py-1 rounded flex items-center">
-                                      <Terminal className="h-3 w-3 mr-1" />
-                                      <span className="font-mono">$ run test</span>
+                                      <CircleSlash className="h-3 w-3 mr-1" />
+                                      <span className="font-mono">pendiente</span>
                                     </div>
                                   )}
                                 </div>
@@ -701,7 +826,7 @@ export default function RetosPage() {
                               {truncateText(reto.description, 80)}
                             </p>
 
-                            <div className="flex items-center justify-between mt-2">
+                            <div className="flex flex-wrap items-center justify-between mt-2 gap-2">
                               <div className="flex items-center text-xs text-gray-400">
                                 <Calendar className="h-3.5 w-3.5 mr-1.5" />
                                 <span className="font-mono">
@@ -719,13 +844,13 @@ export default function RetosPage() {
                                 )}
                                 {user && reto.completed ? (
                                   <div className="bg-[#1e1e1e] text-xs text-green-400 px-2 py-1 rounded flex items-center">
-                                    <Terminal className="h-3 w-3 mr-1" />
-                                    <span className="font-mono">$ test: passed</span>
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    <span className="font-mono">completado</span>
                                   </div>
                                 ) : (
                                   <div className="bg-[#1e1e1e] text-xs text-gray-300 px-2 py-1 rounded flex items-center">
-                                    <Terminal className="h-3 w-3 mr-1" />
-                                    <span className="font-mono">$ run test</span>
+                                    <CircleSlash className="h-3 w-3 mr-1" />
+                                    <span className="font-mono">pendiente</span>
                                   </div>
                                 )}
                               </div>
@@ -751,8 +876,6 @@ export default function RetosPage() {
                 <h3 className="text-xl font-bold flex items-center gap-2">
                   <UserRound className="h-5 w-5 text-blue-500" />
                   Iniciar sesión requerido
-                  <UserRound className="h-5 w-5 text-blue-500" />
-                  Iniciar sesión requerido
                 </h3>
                 <button
                   onClick={() => setLoginModalVisible(false)}
@@ -776,15 +899,17 @@ export default function RetosPage() {
                 Únete a nuestra comunidad para resolver retos y mejorar tus habilidades de programación.
               </p>
             </div>
-            <div className="p-4 border-t border-border flex justify-between">
-              <Button variant="outline" onClick={() => setLoginModalVisible(false)}>
+            <div className="p-4 border-t border-border flex flex-col sm:flex-row justify-between gap-2">
+              <Button variant="outline" onClick={() => setLoginModalVisible(false)} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <div className="flex gap-2">
-                <Link href="/registro">
-                  <Button variant="outline">Crear cuenta</Button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Link href="/registro" className="w-full sm:w-auto">
+                  <Button variant="outline" className="w-full">
+                    Crear cuenta
+                  </Button>
                 </Link>
-                <Button onClick={handleGoToLogin}>
+                <Button onClick={handleGoToLogin} className="w-full sm:w-auto">
                   <UserRound className="h-4 w-4 mr-2" />
                   Iniciar sesión
                 </Button>
@@ -826,11 +951,11 @@ export default function RetosPage() {
                 Actualiza a Premium para acceder a todos los retos anteriores y desbloquear todas las funcionalidades.
               </p>
             </div>
-            <div className="p-4 border-t border-border flex justify-between">
-              <Button variant="outline" onClick={() => setPremiumModalVisible(false)}>
+            <div className="p-4 border-t border-border flex flex-col sm:flex-row justify-between gap-2">
+              <Button variant="outline" onClick={() => setPremiumModalVisible(false)} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button onClick={handleGoToPricingPage}>
+              <Button onClick={handleGoToPricingPage} className="w-full sm:w-auto">
                 <Trophy className="h-4 w-4 mr-2" />
                 Ver planes Premium
               </Button>
