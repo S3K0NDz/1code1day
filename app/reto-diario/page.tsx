@@ -25,7 +25,6 @@ import {
 import NavbarWithUser from "@/components/navbar-with-user"
 import InteractiveGridBackground from "@/components/interactive-grid-background"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CodeOutput } from "@/components/code-output"
 import { Toaster } from "@/components/ui/toaster"
 import { toast } from "@/components/ui/use-toast"
 import KeyboardHandler from "@/app/retos/[id]/keyboard-handler"
@@ -43,6 +42,15 @@ declare global {
   }
 }
 
+interface TestResult {
+  id: number
+  passed: boolean
+  input: string
+  expected: string
+  result: any
+  error?: string
+}
+
 export default function RetoDiarioPage() {
   const [dailyChallenge, setDailyChallenge] = useState<any>(null)
   const [code, setCode] = useState("")
@@ -53,6 +61,7 @@ export default function RetoDiarioPage() {
   const [success, setSuccess] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [testResults, setTestResults] = useState<TestResult[]>([])
 
   // Use separate states for hours, minutes, and seconds instead of an object
   const [nextHours, setNextHours] = useState(0)
@@ -340,22 +349,17 @@ export default function RetoDiarioPage() {
         originalConsoleLog(...args)
       }
 
-      let allTestsPassed = true
-      let testOutput = ""
-
-      if (!dailyChallenge.testCases || dailyChallenge.testCases.length === 0) {
-        setOutput("No hay casos de prueba definidos para este reto.")
-        setIsRunning(false)
-        return
-      }
-
       // Procesar casos de prueba
       if (dailyChallenge.testCases && dailyChallenge.testCases.length > 0) {
+        const results: TestResult[] = []
+        let allTestsPassed = true
+        let testOutput = ""
+
         for (let i = 0; i < dailyChallenge.testCases.length; i++) {
           const test = dailyChallenge.testCases[i]
           let result
           let passed = false
-          let error = null
+          let error: string | null = null
 
           try {
             // Preparar el input según su tipo
@@ -371,7 +375,6 @@ export default function RetoDiarioPage() {
             // Ejecutar la función con el input
             if (typeof input === "string" && input.includes(",")) {
               const args = input.split(",").map((arg) => {
-                // Intentar convertir a número si es posible
                 const trimmed = arg.trim()
                 const num = Number(trimmed)
                 return isNaN(num) ? trimmed : num
@@ -397,81 +400,93 @@ export default function RetoDiarioPage() {
 
             // Comparar resultado con el esperado
             if (typeof result === "boolean" && typeof expected === "string") {
-              // Si el resultado es un booleano y el esperado es string, convertir para comparar
               passed = result.toString() === expected
             } else if (typeof expected === "boolean" && typeof result === "string") {
-              // Si el esperado es un booleano y el resultado es string, convertir para comparar
               passed = expected.toString() === result
             } else if (typeof result === "number" && typeof expected === "string") {
-              // Si el resultado es un número y el esperado es string, convertir para comparar
               passed = result.toString() === expected
             } else if (typeof expected === "number" && typeof result === "string") {
-              // Si el esperado es un número y el resultado es string, convertir para comparar
               passed = expected.toString() === result
             } else if (typeof expected === "number" && typeof result === "number") {
-              // Comparación directa de números
               passed = result === expected
             } else if (typeof expected === "boolean" && typeof result === "boolean") {
-              // Comparación directa de booleanos
               passed = result === expected
             } else {
-              // Para otros tipos, usar la comparación de cadenas JSON
               passed = JSON.stringify(result) === JSON.stringify(expected)
             }
-          } catch (e) {
+
+            results.push({
+              id: i + 1,
+              passed,
+              input: test.input,
+              expected: test.expected,
+              result: result,
+              error: null,
+            })
+          } catch (e: any) {
             error = e.message
             passed = false
+            results.push({
+              id: i + 1,
+              passed: false,
+              input: test.input,
+              expected: test.expected,
+              result: undefined,
+              error: error,
+            })
           }
-
-          testOutput += `━━\n`
-          testOutput += `▶ Test ${i + 1}: ${passed ? "✅ PASÓ" : "❌ FALLÓ"}\n`
-          testOutput += `━━\n\n`
-          testOutput += `📥 Entrada: ${test.input}\n\n`
-          testOutput += `🎯 Esperado: ${test.expected}\n\n`
-          testOutput += `🔍 Obtenido: ${result !== undefined ? result : "undefined"}\n\n`
-
-          if (error) {
-            testOutput += `⚠️ Error: ${error}\n\n`
-          }
-
-          testOutput += `\n\n`
 
           if (!passed) allTestsPassed = false
         }
-      }
 
-      console.log = originalConsoleLog
-      setOutput(consoleOutput + testOutput)
+        setTestResults(results)
+        const passedCount = results.filter((r) => r.passed).length
+        const totalTests = results.length
 
-      if (allTestsPassed) {
-        setSuccess(true)
-        setOutput((prev) => prev + "\n✅ ¡Felicidades! Todos los tests pasaron.")
-        setTimeout(() => setShowSuccessModal(true), 1000)
+        testOutput = `${passedCount} de ${totalTests} tests pasaron\n\n`
+        testOutput += results
+          .map((result) => {
+            let output = `Test ${result.id}: ${result.passed ? "✅" : "❌"}\n`
+            output += `Input: ${result.input}\n`
+            output += `Expected: ${result.expected}\n`
+            output += `Result: ${result.result}\n`
+            if (result.error) output += `Error: ${result.error}\n`
+            return output
+          })
+          .join("\n")
 
-        // Guardar la solución en la base de datos
-        if (user) {
-          try {
-            const challengeData = {
-              user_id: user.id,
-              challenge_id: dailyChallenge.id,
-              completed_at: new Date().toISOString(),
-              code: code,
-              is_saved: true, // Automáticamente guardar los retos diarios completados
-              execution_time: remainingTime, // Guardar el tiempo que le tomó completar el reto
+        setOutput(consoleOutput + "\n" + testOutput)
+
+        if (allTestsPassed) {
+          setSuccess(true)
+          setOutput((prev) => prev + "\n✅ ¡Felicidades! Todos los tests pasaron.")
+          setTimeout(() => setShowSuccessModal(true), 1000)
+
+          // Guardar la solución en la base de datos
+          if (user) {
+            try {
+              const challengeData = {
+                user_id: user.id,
+                challenge_id: dailyChallenge.id,
+                completed_at: new Date().toISOString(),
+                code: code,
+                is_saved: true, // Automáticamente guardar los retos diarios completados
+                execution_time: remainingTime, // Guardar el tiempo que le tomó completar el reto
+              }
+
+              const result = await saveCompletedChallenge(challengeData)
+
+              if (!result.success) {
+                console.error("Error al guardar la solución:", result.error)
+              }
+            } catch (error) {
+              console.error("Error al guardar la solución:", error)
             }
-
-            const result = await saveCompletedChallenge(challengeData)
-
-            if (!result.success) {
-              console.error("Error al guardar la solución:", result.error)
-            }
-          } catch (error) {
-            console.error("Error al guardar la solución:", error)
           }
+        } else {
+          setSuccess(false)
+          setOutput((prev) => prev + "\n❌ Algunos tests fallaron.")
         }
-      } else {
-        setSuccess(false)
-        setOutput((prev) => prev + "\n❌ Algunos tests fallaron.")
       }
     } catch (error) {
       setOutput(`Error: ${error.message}`)
@@ -538,7 +553,9 @@ export default function RetoDiarioPage() {
       )
     } else if (platform === "facebook") {
       window.open(
-        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`,
+        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(
+          text,
+        )}`,
         "_blank",
       )
     } else if (platform === "linkedin") {
@@ -887,7 +904,101 @@ export default function RetoDiarioPage() {
                         <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent"></div>
                       </div>
                     ) : (
-                      <CodeOutput value={output || "Ejecuta tu código para ver los resultados"} height="100%" />
+                      <div className="h-full overflow-auto">
+  {testResults.length > 0 ? (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-white">Resultados de Tests</h3>
+        <span className="text-sm text-muted-foreground">
+          {testResults.filter((r) => r.passed).length} de {testResults.length} tests pasando
+        </span>
+      </div>
+      <div className="space-y-3">
+        {testResults.map((result, index) => (
+          <motion.div
+            key={result.id}
+            className={`p-4 rounded-lg border ${
+              result.passed
+                ? "bg-green-500/10 border-green-500/30"
+                : "bg-red-500/10 border-red-500/30"
+            }`}
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.5, delay: index * 0.1, ease: "easeOut" }}
+            whileHover={{ scale: 1.02 }}
+          >
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <motion.p
+                  className="text-sm font-medium flex items-center gap-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, delay: index * 0.2 + 0.1 }}
+                >
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{
+                      duration: 0.4,
+                      delay: index * 0.2 + 0.2,
+                      type: "spring",
+                      stiffness: 200,
+                    }}
+                  >
+                    {result.passed ? (
+                      <span className="text-green-500 text-lg">✓</span>
+                    ) : (
+                      <span className="text-red-500 text-lg">✕</span>
+                    )}
+                  </motion.span>
+                  Test {result.id}
+                </motion.p>
+                <div className="text-xs space-y-1 text-muted-foreground">
+                  <p>
+                    Input: <span className="text-foreground font-mono">{result.input}</span>
+                  </p>
+                  <p>
+                    Expected: <span className="text-foreground font-mono">{result.expected}</span>
+                  </p>
+                  <p>
+                    Result: <span className="text-foreground font-mono">{result.result}</span>
+                  </p>
+                  {result.error && (
+                    <motion.p
+                      className="text-red-400"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3, delay: index * 0.2 + 0.3 }}
+                    >
+                      Error: {result.error}
+                    </motion.p>
+                  )}
+                </div>
+              </div>
+              {/* Indicador visual adicional */}
+              <motion.div
+                className={`w-2 h-2 rounded-full ${
+                  result.passed ? "bg-green-500" : "bg-red-500"
+                }`}
+                initial={{ scale: 0 }}
+                animate={{ scale: [0, 1.2, 1] }}
+                transition={{
+                  duration: 0.5,
+                  delay: index * 0.2 + 0.3,
+                  ease: "easeInOut",
+                }}
+              />
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  ) : (
+    <div className="h-full flex items-center justify-center text-muted-foreground">
+      {output || "Ejecuta tu código para ver los resultados"}
+    </div>
+  )}
+</div>
                     )}
                   </div>
                 </div>
@@ -1340,7 +1451,60 @@ export default function RetoDiarioPage() {
                         </div>
                       </div>
                     ) : (
-                      <CodeOutput value={output || "Ejecuta tu código para ver los resultados"} height="100%" />
+                      <div className="h-full overflow-auto">
+                        {testResults.length > 0 ? (
+                          <div className="p-4 space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-sm font-medium">Tests</h3>
+                              <span className="text-sm text-muted-foreground">
+                                {testResults.filter((r) => r.passed).length} de {testResults.length} tests pasando
+                              </span>
+                            </div>
+                            <div className="space-y-2">
+                              {testResults.map((result) => (
+                                <div
+                                  key={result.id}
+                                  className={`p-4 rounded-lg border ${
+                                    result.passed
+                                      ? "bg-green-500/10 border-green-500/20"
+                                      : "bg-red-500/10 border-red-500/20"
+                                  }`}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="space-y-1">
+                                      <p className="text-sm font-medium flex items-center gap-2">
+                                        {result.passed ? (
+                                          <span className="text-green-500">✓</span>
+                                        ) : (
+                                          <span className="text-red-500">✕</span>
+                                        )}
+                                        Test {result.id}
+                                      </p>
+                                      <div className="text-xs space-y-1 text-muted-foreground">
+                                        <p>
+                                          Input: <span className="text-foreground font-mono">{result.input}</span>
+                                        </p>
+                                        <p>
+                                          Expected:{" "}
+                                          <span className="text-foreground font-mono">{result.expected}</span>
+                                        </p>
+                                        <p>
+                                          Result: <span className="text-foreground font-mono">{result.result}</span>
+                                        </p>
+                                        {result.error && <p className="text-red-400">Error: {result.error}</p>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-muted-foreground">
+                            {output || "Ejecuta tu código para ver los resultados"}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1549,8 +1713,10 @@ export default function RetoDiarioPage() {
             </InteractiveGridBackground>
           )}
         </div>
+        <KeyboardHandler editorRef={editorRef} />
+        <ClipboardHelper editorRef={editorRef} />
+        <Toaster />
       </div>
     </InteractiveGridBackground>
   )
 }
-
