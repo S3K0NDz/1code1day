@@ -14,7 +14,6 @@ import {
   Trophy,
   X,
   Facebook,
-  Twitter,
   Linkedin,
   Calendar,
   ArrowDown,
@@ -392,8 +391,18 @@ export default function RetoDiarioPage() {
               }
             }
 
+            // Convertir strings booleanos a valores booleanos reales
+            if (expected === "true") expected = true
+            if (expected === "false") expected = false
+
             // Comparar resultado con el esperado
-            if (typeof result === "number" && typeof expected === "string") {
+            if (typeof result === "boolean" && typeof expected === "string") {
+              // Si el resultado es un booleano y el esperado es string, convertir para comparar
+              passed = result.toString() === expected
+            } else if (typeof expected === "boolean" && typeof result === "string") {
+              // Si el esperado es un booleano y el resultado es string, convertir para comparar
+              passed = expected.toString() === result
+            } else if (typeof result === "number" && typeof expected === "string") {
               // Si el resultado es un número y el esperado es string, convertir para comparar
               passed = result.toString() === expected
             } else if (typeof expected === "number" && typeof result === "string") {
@@ -401,6 +410,9 @@ export default function RetoDiarioPage() {
               passed = expected.toString() === result
             } else if (typeof expected === "number" && typeof result === "number") {
               // Comparación directa de números
+              passed = result === expected
+            } else if (typeof expected === "boolean" && typeof result === "boolean") {
+              // Comparación directa de booleanos
               passed = result === expected
             } else {
               // Para otros tipos, usar la comparación de cadenas JSON
@@ -519,14 +531,14 @@ export default function RetoDiarioPage() {
     const text = `¡He completado el reto "${dailyChallenge?.title}" en 1code1day! 🚀 #1code1day`
     const url = `https://1code1day.vercel.app/reto-diario`
 
-    if (platform === "facebook") {
+    if (platform === "twitter") {
       window.open(
-        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`,
+        `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
         "_blank",
       )
-    } else if (platform === "twitter") {
+    } else if (platform === "facebook") {
       window.open(
-        `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`,
         "_blank",
       )
     } else if (platform === "linkedin") {
@@ -1045,50 +1057,48 @@ export default function RetoDiarioPage() {
                       transition={{ duration: 0.3, delay: 0.4 }}
                     >
                       <p className="text-xs text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
-                      <div className="flex justify-center gap-3">
+                      <div className="grid grid-cols-3 gap-3 max-w-[250px] mx-auto">
                         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                           <Button
                             variant="outline"
-                            size="icon"
+                            className="w-full"
                             onClick={() => handleShare("twitter")}
-                            title="Compartir en Twitter"
-                            className="bg-secondary hover:bg-secondary-foreground transition-colors"
-                            className="bg-black/30 border-gray-700 hover:bg-blue-900/20 transition-colors"
+                            title="Compartir en X"
                           >
-                            <Twitter className="h-4 w-4 text-blue-400" />
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true" fill="currentColor">
+                              <path d="M13.3174 10.7749L19.1457 4H17.7646L12.7039 9.88256L8.66193 4H4L10.1122 12.8955L4 20H5.38119L10.7254 13.7878L14.994 20H19.656L13.3174 10.7749ZM11.4257 12.9738L10.8064 12.0881L5.87886 5.03974H8.00029L11.9769 10.728L12.5962 11.6137L17.7646 19.0075H15.6432L11.4257 12.9738Z" />
+                            </svg>
                           </Button>
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                           <Button
                             variant="outline"
-                            size="icon"
+                            className="w-full"
                             onClick={() => handleShare("facebook")}
                             title="Compartir en Facebook"
-                            className="bg-secondary hover:bg-secondary-foreground transition-colors"
                           >
-                            <Facebook className="h-4 w-4 text-blue-500" />
+                            <Facebook className="h-4 w-4" />
                           </Button>
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                           <Button
                             variant="outline"
-                            size="icon"
+                            className="w-full"
                             onClick={() => handleShare("linkedin")}
                             title="Compartir en LinkedIn"
-                            className="bg-secondary hover:bg-secondary-foreground transition-colors"
                           >
-                            <Linkedin className="h-4 w-4 text-blue-600" />
+                            <Linkedin className="h-4 w-4" />
                           </Button>
                         </motion.div>
                       </div>
                     </motion.div>
                   </div>
-                  <div className="p-4 border-t border-border flex flex-col sm:flex-row gap-2 sm:gap-3 sm:justify-end bg-secondary">
+                  <div className="p-4 border-t border-border flex flex-row justify-between items-center bg-secondary">
                     <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                       <Button
                         variant="outline"
                         onClick={() => setShowSuccessModal(false)}
-                        className="w-full sm:w-auto bg-secondary hover:bg-secondary-foreground transition-colors"
+                        className="bg-secondary hover:bg-secondary-foreground transition-colors"
                       >
                         Cerrar
                       </Button>
@@ -1099,7 +1109,6 @@ export default function RetoDiarioPage() {
                           setShowSuccessModal(false)
                           router.push("/retos")
                         }}
-                        className="w-full sm:w-auto"
                       >
                         Explorar más retos
                       </Button>
@@ -1478,50 +1487,48 @@ export default function RetoDiarioPage() {
                       transition={{ duration: 0.3, delay: 0.4 }}
                     >
                       <p className="text-xs text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
-                      <div className="flex justify-center gap-3">
+                      <div className="grid grid-cols-3 gap-4 max-w-[300px] mx-auto">
                         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                           <Button
                             variant="outline"
-                            size="icon"
+                            className="w-full"
                             onClick={() => handleShare("twitter")}
-                            title="Compartir en Twitter"
-                            className="bg-secondary hover:bg-secondary-foreground transition-colors"
-                            className="bg-black/30 border-gray-700 hover:bg-blue-900/20 transition-colors"
+                            title="Compartir en X"
                           >
-                            <Twitter className="h-4 w-4 text-blue-400" />
+                            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true" fill="currentColor">
+                              <path d="M13.3174 10.7749L19.1457 4H17.7646L12.7039 9.88256L8.66193 4H4L10.1122 12.8955L4 20H5.38119L10.7254 13.7878L14.994 20H19.656L13.3174 10.7749ZM11.4257 12.9738L10.8064 12.0881L5.87886 5.03974H8.00029L11.9769 10.728L12.5962 11.6137L17.7646 19.0075H15.6432L11.4257 12.9738Z" />
+                            </svg>
                           </Button>
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                           <Button
                             variant="outline"
-                            size="icon"
+                            className="w-full"
                             onClick={() => handleShare("facebook")}
                             title="Compartir en Facebook"
-                            className="bg-secondary hover:bg-secondary-foreground transition-colors"
                           >
-                            <Facebook className="h-4 w-4 text-blue-500" />
+                            <Facebook className="h-5 w-5" />
                           </Button>
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                           <Button
                             variant="outline"
-                            size="icon"
+                            className="w-full"
                             onClick={() => handleShare("linkedin")}
                             title="Compartir en LinkedIn"
-                            className="bg-secondary hover:bg-secondary-foreground transition-colors"
                           >
-                            <Linkedin className="h-4 w-4 text-blue-600" />
+                            <Linkedin className="h-5 w-5" />
                           </Button>
                         </motion.div>
                       </div>
                     </motion.div>
                   </div>
-                  <div className="p-4 border-t border-border flex flex-col sm:flex-row gap-2 sm:gap-3 sm:justify-end bg-secondary">
+                  <div className="p-4 border-t border-border flex flex-row justify-between items-center bg-secondary">
                     <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                       <Button
                         variant="outline"
                         onClick={() => setShowSuccessModal(false)}
-                        className="w-full sm:w-auto bg-secondary hover:bg-secondary-foreground transition-colors"
+                        className="bg-secondary hover:bg-secondary-foreground transition-colors"
                       >
                         Cerrar
                       </Button>
@@ -1532,7 +1539,6 @@ export default function RetoDiarioPage() {
                           setShowSuccessModal(false)
                           router.push("/retos")
                         }}
-                        className="w-full sm:w-auto"
                       >
                         Explorar más retos
                       </Button>

@@ -18,7 +18,6 @@ import {
   Facebook,
   Twitter,
   Linkedin,
-  Download,
   Lock,
   Terminal,
   Code,
@@ -511,7 +510,7 @@ export default function RetoPage() {
     let shareUrl = ""
     switch (platform) {
       case "twitter":
-        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+        shareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
         break
       case "facebook":
         shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`
@@ -889,7 +888,7 @@ export default function RetoPage() {
                     </div>
                   </div>
                 </div>
-                <div className="p-4 border-t border-border flex flex-col gap-2">
+                <div className="p-4 border-t border-border flex justify-between items-center">
                   <Button variant="outline" onClick={() => setShowSuccessModal(false)}>
                     Cerrar
                   </Button>
@@ -1213,39 +1212,41 @@ export default function RetoPage() {
                   </div>
                   <div className="text-center">
                     <p className="text-xs sm:text-sm text-muted-foreground mb-4">¡Comparte tu logro con el mundo!</p>
-                    <div className="flex justify-center gap-3">
+                    <div className="grid grid-cols-3 gap-4 max-w-[300px] mx-auto">
                       <Button
                         variant="outline"
-                        size="icon"
+                        className="w-full"
                         onClick={() => handleShare("twitter")}
-                        title="Compartir en Twitter"
+                        title="Compartir en X"
                       >
-                        <Twitter className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true" fill="currentColor">
+                          <path d="M13.3174 10.7749L19.1457 4H17.7646L12.7039 9.88256L8.66193 4H4L10.1122 12.8955L4 20H5.38119L10.7254 13.7878L14.994 20H19.656L13.3174 10.7749ZM11.4257 12.9738L10.8064 12.0881L5.87886 5.03974H8.00029L11.9769 10.728L12.5962 11.6137L17.7646 19.0075H15.6432L11.4257 12.9738Z" />
+                        </svg>
+                        <span className="sr-only">Compartir en X</span>
                       </Button>
                       <Button
                         variant="outline"
-                        size="icon"
+                        className="w-full"
                         onClick={() => handleShare("facebook")}
                         title="Compartir en Facebook"
                       >
-                        <Facebook className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <Facebook className="h-5 w-5" />
+                        <span className="sr-only">Compartir en Facebook</span>
                       </Button>
                       <Button
                         variant="outline"
-                        size="icon"
+                        className="w-full"
                         onClick={() => handleShare("linkedin")}
                         title="Compartir en LinkedIn"
                       >
-                        <Linkedin className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </Button>
-                      <Button variant="outline" size="icon" onClick={generateImage} title="Descargar imagen">
-                        <Download className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <Linkedin className="h-5 w-5" />
+                        <span className="sr-only">Compartir en LinkedIn</span>
                       </Button>
                     </div>
                   </div>
                 </div>
-                <div className="p-4 border-t border-border flex flex-col sm:flex-row gap-2 sm:gap-0 sm:justify-between">
-                  <Button variant="outline" onClick={() => setShowSuccessModal(false)} className="w-full sm:w-auto">
+                <div className="p-4 border-t border-border flex justify-between items-center">
+                  <Button variant="outline" onClick={() => setShowSuccessModal(false)}>
                     Cerrar
                   </Button>
                   <Button
@@ -1253,7 +1254,6 @@ export default function RetoPage() {
                       setShowSuccessModal(false)
                       window.location.href = "/retos"
                     }}
-                    className="w-full sm:w-auto"
                   >
                     Siguiente reto
                   </Button>
